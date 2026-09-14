@@ -393,6 +393,9 @@ function renderOperationalMap() {
       .filter((x) => x.latitude)
       .map((x) => ({ ...x, kind: "responder", label: x.name })),
     ...state.shelters.map((x) => ({ ...x, kind: "shelter", label: x.name })),
+    ...state.reports
+      .filter((x) => x.latitude && x.longitude)
+      .map((x) => ({ ...x, kind: "report", label: pretty(x.category) })),
   ];
   const scale = Math.max(0.008, incident.radius_km / 75);
   const position = (p) => ({
@@ -411,12 +414,14 @@ function renderOperationalMap() {
       const shape =
         p.kind === "shelter"
           ? `<rect x="${q.x - 7}" y="${q.y - 7}" width="14" height="14" rx="3"/>`
-          : `<circle cx="${q.x}" cy="${q.y}" r="7"/>`;
+          : p.kind === "report"
+            ? `<path d="M${q.x - 7} ${q.y + 6}L${q.x} ${q.y - 7}L${q.x + 7} ${q.y + 6}Z"/>`
+            : `<circle cx="${q.x}" cy="${q.y}" r="7"/>`;
       return `<g class="map-marker ${p.kind}"><title>${escapeHtml(p.label || p.kind)}</title>${shape}<text x="${q.x + 11}" y="${q.y + 4}">${escapeHtml(p.label || pretty(p.kind))}</text></g>`;
     })
     .join("");
   $("#operationalMap").innerHTML =
-    `<svg viewBox="0 0 700 380" role="img" aria-label="Live operational map"><defs><pattern id="mapGrid" width="35" height="35" patternUnits="userSpaceOnUse"><path d="M35 0H0V35" fill="none" stroke="#d8e1dc" stroke-width="1"/></pattern></defs><rect width="700" height="380" rx="14" fill="url(#mapGrid)"/><path d="M30 260 C130 210 170 315 280 250 S430 175 520 230 S620 230 690 150" fill="none" stroke="#b9d5e7" stroke-width="14" opacity=".75"/><circle class="alert-radius" cx="350" cy="190" r="125"/><circle class="fire-radius" cx="350" cy="190" r="${35 + incident.severity_score / 3}"/><text class="fire-label" x="350" y="194">${incident.severity_score}</text>${markers}</svg>`;
+    `<svg viewBox="0 0 700 380" role="img" aria-label="Live operational map"><defs><pattern id="mapGrid" width="35" height="35" patternUnits="userSpaceOnUse"><path d="M35 0H0V35" fill="none" stroke="#cbd9d1" stroke-width="1"/></pattern><linearGradient id="terrain" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#edf4ef"/><stop offset="1" stop-color="#e2ebe5"/></linearGradient></defs><rect width="700" height="380" rx="14" fill="url(#terrain)"/><path d="M60 35L180 18l90 65 105-30 103 75 142-45 80 35V0H0v100Z" fill="#dce9df" opacity=".8"/><path d="M0 310l95-65 94 25 80-54 85 45 112-28 110 50 124-44v141H0Z" fill="#e7eee9"/><rect width="700" height="380" rx="14" fill="url(#mapGrid)" opacity=".55"/><path d="M30 260 C130 210 170 315 280 250 S430 175 520 230 S620 230 690 150" fill="none" stroke="#b9d5e7" stroke-width="14" opacity=".75"/><path d="M0 125 C120 95 190 170 300 135 S510 80 700 105" fill="none" stroke="#fff" stroke-width="5" opacity=".9"/><path d="M90 380 C110 280 220 220 250 0M510 380C480 270 550 180 610 0" fill="none" stroke="#fff" stroke-width="3" opacity=".8"/><circle class="alert-radius" cx="350" cy="190" r="125"/><circle class="fire-radius" cx="350" cy="190" r="${35 + incident.severity_score / 3}"/><text class="fire-label" x="350" y="194">${incident.severity_score}</text>${markers}<g class="map-scale"><rect x="20" y="341" width="138" height="23" rx="7"/><text x="31" y="356">● LIVE · ${points.length} FIELD SIGNALS</text></g></svg>`;
 }
 function renderSeverityFactors() {
   const incident = state.incidents.find((x) => x.id === state.incidentId);
