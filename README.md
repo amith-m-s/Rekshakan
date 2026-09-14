@@ -44,6 +44,7 @@ usage instructions.
 Full step-by-step guide (keys, Supabase schema, Vercel deploy, checks): **[docs/SETUP.md](docs/SETUP.md)**.
 Phone app that sends spoofed-location field reports, and the dashboard's reaction to them:
 **[docs/MOBILE.md](docs/MOBILE.md)**.
+Hosting the Express backend (`backend/`) on Render: **[docs/RENDER.md](docs/RENDER.md)**.
 
 Quick version:
 

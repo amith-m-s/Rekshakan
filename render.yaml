@@ -1,0 +1,36 @@
+# Render Blueprint for the Express backend in backend/. Setup guide: docs/RENDER.md.
+# The Next.js dashboard at the repo root is deployed separately on Vercel.
+services:
+  - type: web
+    name: rescuermap-backend
+    runtime: node
+    rootDir: backend
+    plan: free
+    region: oregon
+    buildCommand: npm ci && npm run build
+    # Migrations run automatically on startup; demo data is seeded only into an empty database.
+    startCommand: node dist/src/cli/seed-if-empty.js && node dist/src/server.js
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: 24.14.1
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      # Comma-separated browser origins allowed to call the API, e.g. the Vercel dashboard URL.
+      - key: CORS_ORIGINS
+        sync: false
+      - key: TRUST_PROXY
+        value: "1"
+      - key: LOG_LEVEL
+        value: info
+      - key: PROVIDER_MODE
+        value: mock
+      - key: PROVIDER_TIMEOUT_MS
+        value: "5000"
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b
+      - key: NOMINATIM_USER_AGENT
+        value: "RescuerMapHackathon/1.0 (contact: nathan.bijo@gmail.com)"

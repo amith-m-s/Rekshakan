@@ -11,6 +11,8 @@ export const config = {
   jwtSecret:
     process.env.JWT_SECRET || "development-only-secret-change-me-32chars",
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "8h",
+  // Number of reverse proxies in front of the app (1 on Render). Lets rate limiting see real client IPs.
+  trustProxy: num(process.env.TRUST_PROXY, 0),
   corsOrigins: (
     process.env.CORS_ORIGINS || "http://localhost:3000,http://localhost:5173"
   ).split(","),
