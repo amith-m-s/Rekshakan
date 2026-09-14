@@ -322,6 +322,10 @@ If something's wrong, open **Vercel → rescuermap → Logs**. Server warnings f
 
 ## Troubleshooting
 
+**Start here:** open `https://<your-app>/api/health` (sign in with the dashboard password). It shows which
+variables are set (yes/no only), which Supabase project the server is connected to, whether each table is
+reachable, and hints for what to fix.
+
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
 | Badge says **Seed data** | Tables missing, or URL/key mismatch | Rerun Part 2.2; check `NEXT_PUBLIC_SUPABASE_URL` matches the project |

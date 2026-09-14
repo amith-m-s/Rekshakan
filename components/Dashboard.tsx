@@ -63,7 +63,8 @@ export default function Dashboard() {
   const [realtime, setRealtime] = useState(false);
   useEffect(() => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    // Literal references so Next inlines them into the browser bundle at build time.
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     if (!url || !key) return;
 
     let cancelled = false;
