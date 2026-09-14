@@ -45,6 +45,7 @@ Full step-by-step guide (keys, Supabase schema, Vercel deploy, checks): **[docs/
 Phone app that sends spoofed-location field reports, and the dashboard's reaction to them:
 **[docs/MOBILE.md](docs/MOBILE.md)**.
 Hosting the Express backend (`backend/`) on Render: **[docs/RENDER.md](docs/RENDER.md)**.
+Simulating phones from the laptop instead of a real app (`npm run simulate`): **[docs/SIMULATOR.md](docs/SIMULATOR.md)**.
 
 Quick version:
 

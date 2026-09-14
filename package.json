@@ -6,7 +6,8 @@
         "dev": "next dev",
         "build": "next build",
         "start": "next start",
-        "lint": "eslint"
+        "lint": "eslint",
+        "simulate": "node simulator/server.mjs"
     },
     "dependencies": {
         "@supabase/supabase-js": "^2.116.0",
