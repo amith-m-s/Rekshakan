@@ -11,6 +11,7 @@ const state = {
   reports: [],
   responders: [],
   responderProfile: null,
+  map: null,
   socket: null,
 };
 const titles = {
@@ -421,7 +422,122 @@ function renderOperationalMap() {
     })
     .join("");
   $("#operationalMap").innerHTML =
-    `<svg viewBox="0 0 700 380" role="img" aria-label="Live operational map"><defs><pattern id="mapGrid" width="35" height="35" patternUnits="userSpaceOnUse"><path d="M35 0H0V35" fill="none" stroke="#cbd9d1" stroke-width="1"/></pattern><linearGradient id="terrain" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#edf4ef"/><stop offset="1" stop-color="#e2ebe5"/></linearGradient></defs><rect width="700" height="380" rx="14" fill="url(#terrain)"/><path d="M60 35L180 18l90 65 105-30 103 75 142-45 80 35V0H0v100Z" fill="#dce9df" opacity=".8"/><path d="M0 310l95-65 94 25 80-54 85 45 112-28 110 50 124-44v141H0Z" fill="#e7eee9"/><rect width="700" height="380" rx="14" fill="url(#mapGrid)" opacity=".55"/><path d="M30 260 C130 210 170 315 280 250 S430 175 520 230 S620 230 690 150" fill="none" stroke="#b9d5e7" stroke-width="14" opacity=".75"/><path d="M0 125 C120 95 190 170 300 135 S510 80 700 105" fill="none" stroke="#fff" stroke-width="5" opacity=".9"/><path d="M90 380 C110 280 220 220 250 0M510 380C480 270 550 180 610 0" fill="none" stroke="#fff" stroke-width="3" opacity=".8"/><circle class="alert-radius" cx="350" cy="190" r="125"/><circle class="fire-radius" cx="350" cy="190" r="${35 + incident.severity_score / 3}"/><text class="fire-label" x="350" y="194">${incident.severity_score}</text>${markers}<g class="map-scale"><rect x="20" y="341" width="138" height="23" rx="7"/><text x="31" y="356">● LIVE · ${points.length} FIELD SIGNALS</text></g></svg>`;
+    `<div id="leafletMap" class="leaflet-map" aria-label="Interactive operational map"></div><div id="offlineMap" class="offline-map"><svg viewBox="0 0 700 380" role="img" aria-label="Offline operational map"><defs><pattern id="mapGrid" width="35" height="35" patternUnits="userSpaceOnUse"><path d="M35 0H0V35" fill="none" stroke="#cbd9d1" stroke-width="1"/></pattern><linearGradient id="terrain" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#edf4ef"/><stop offset="1" stop-color="#e2ebe5"/></linearGradient></defs><rect width="700" height="380" rx="14" fill="url(#terrain)"/><path d="M60 35L180 18l90 65 105-30 103 75 142-45 80 35V0H0v100Z" fill="#dce9df" opacity=".8"/><path d="M0 310l95-65 94 25 80-54 85 45 112-28 110 50 124-44v141H0Z" fill="#e7eee9"/><rect width="700" height="380" rx="14" fill="url(#mapGrid)" opacity=".55"/><path d="M30 260 C130 210 170 315 280 250 S430 175 520 230 S620 230 690 150" fill="none" stroke="#b9d5e7" stroke-width="14" opacity=".75"/><path d="M0 125 C120 95 190 170 300 135 S510 80 700 105" fill="none" stroke="#fff" stroke-width="5" opacity=".9"/><circle class="alert-radius" cx="350" cy="190" r="125"/><circle class="fire-radius" cx="350" cy="190" r="${35 + incident.severity_score / 3}"/><text class="fire-label" x="350" y="194">${incident.severity_score}</text>${markers}<g class="map-scale"><rect x="20" y="341" width="138" height="23" rx="7"/><text x="31" y="356">● LIVE · ${points.length} FIELD SIGNALS</text></g></svg></div>`;
+  renderLeafletMap(incident, points);
+}
+function renderLeafletMap(incident, points) {
+  if (!window.L) {
+    $("#mapMode").textContent = "Offline map · interactive tiles unavailable";
+    return;
+  }
+  try {
+    if (state.map) state.map.remove();
+    const map = window.L.map("leafletMap", { zoomControl: false }).setView(
+      [incident.latitude, incident.longitude],
+      13,
+    );
+    state.map = map;
+    window.L.control.zoom({ position: "bottomright" }).addTo(map);
+    window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "© OpenStreetMap contributors",
+    }).addTo(map);
+    const alertLayer = window.L.circle(
+      [incident.latitude, incident.longitude],
+      {
+        radius: incident.radius_km * 1600,
+        color: "#e59b35",
+        weight: 2,
+        dashArray: "8 7",
+        fillColor: "#f1b557",
+        fillOpacity: 0.08,
+      },
+    ).bindPopup(
+      `<b>Alert radius</b><br>${incident.radius_km} km operational zone`,
+    );
+    const fireLayer = window.L.circle([incident.latitude, incident.longitude], {
+      radius: incident.radius_km * 1000,
+      color: "#c9322c",
+      weight: 3,
+      fillColor: "#e94a40",
+      fillOpacity: 0.28,
+    }).bindPopup(
+      `<b>${escapeHtml(incident.name)}</b><br>${incident.severity_level} · ${incident.severity_score}/100`,
+    );
+    alertLayer.addTo(map);
+    fireLayer.addTo(map);
+    const groups = {
+      Help: window.L.layerGroup().addTo(map),
+      Responders: window.L.layerGroup().addTo(map),
+      Shelters: window.L.layerGroup().addTo(map),
+      Reports: window.L.layerGroup().addTo(map),
+    };
+    const heat = [];
+    points.forEach((point) => {
+      const colors = {
+        help: point.priority_level === "CRITICAL" ? "#d5282e" : "#ec841d",
+        responder: point.availability ? "#0b8b5b" : "#2877a6",
+        shelter: "#2877a6",
+        report: "#8450ad",
+      };
+      const names = {
+        help: "Help",
+        responder: "Responders",
+        shelter: "Shelters",
+        report: "Reports",
+      };
+      const marker = window.L.circleMarker([point.latitude, point.longitude], {
+        radius: point.kind === "help" ? 9 : 7,
+        color: "#fff",
+        weight: 2,
+        fillColor: colors[point.kind],
+        fillOpacity: 1,
+      });
+      marker.bindPopup(
+        `<b>${escapeHtml(point.label || pretty(point.kind))}</b><br>${mapPopupDetail(point)}`,
+      );
+      marker.addTo(groups[names[point.kind]]);
+      if (point.kind === "help")
+        heat.push([
+          point.latitude,
+          point.longitude,
+          Math.max(0.3, (point.priority_score || 50) / 100),
+        ]);
+    });
+    if (window.L.heatLayer && heat.length)
+      groups["Risk heatmap"] = window.L.heatLayer(heat, {
+        radius: 42,
+        blur: 30,
+        maxZoom: 17,
+        gradient: { 0.2: "#ffd54a", 0.55: "#f58232", 1: "#d51f32" },
+      }).addTo(map);
+    window.L.control
+      .layers(null, groups, { collapsed: true, position: "topright" })
+      .addTo(map);
+    const bounds = window.L.latLngBounds([
+      [incident.latitude, incident.longitude],
+    ]);
+    points.forEach((p) => bounds.extend([p.latitude, p.longitude]));
+    if (points.length) map.fitBounds(bounds.pad(0.28), { maxZoom: 14 });
+    $("#offlineMap").classList.add("hidden");
+    $("#leafletMap").classList.add("ready");
+    $("#mapMode").textContent =
+      `Interactive OpenStreetMap · ${points.length} live field signals`;
+    setTimeout(() => map.invalidateSize(), 50);
+  } catch (error) {
+    state.map = null;
+    $("#mapMode").textContent =
+      "Offline map · interactive map could not initialize";
+  }
+}
+function mapPopupDetail(point) {
+  if (point.kind === "help")
+    return `${pretty(point.priority_level)} priority · ${point.people_count} people · ${pretty(point.status)}`;
+  if (point.kind === "responder")
+    return `${point.availability ? "Available" : pretty(point.status)} · capacity ${point.passenger_capacity}`;
+  if (point.kind === "shelter")
+    return `${point.occupancy}/${point.capacity} occupied · ${pretty(point.status)}`;
+  return `${pretty(point.verification_status || "unverified")} field report`;
 }
 function renderSeverityFactors() {
   const incident = state.incidents.find((x) => x.id === state.incidentId);

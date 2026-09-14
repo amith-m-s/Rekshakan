@@ -24,7 +24,14 @@ export function createApp() {
     helmet({
       contentSecurityPolicy: {
         directives: {
-          scriptSrc: ["'self'"],
+          scriptSrc: ["'self'", "https://unpkg.com"],
+          styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
+          imgSrc: [
+            "'self'",
+            "data:",
+            "https://*.tile.openstreetmap.org",
+            "https://unpkg.com",
+          ],
           connectSrc: ["'self'", "ws:", "wss:"],
         },
       },

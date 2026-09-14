@@ -4,6 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>RescuerMap Test Console</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIINfQ3ynhCG8cSAlQ1pQp6Aq1jFfMZbSo="
+      crossorigin="anonymous"
+    />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -210,10 +216,12 @@
                   <span class="fire-key">Fire</span
                   ><span class="request-key">Help</span
                   ><span class="responder-key">Responder</span
-                  ><span class="shelter-key">Shelter</span>
+                  ><span class="shelter-key">Shelter</span
+                  ><span class="report-key">Report</span>
                 </div>
               </div>
               <div id="operationalMap" class="operational-map"></div>
+              <p id="mapMode" class="map-mode">Preparing operational map…</p>
             </article>
             <article class="card">
               <div class="card-head">
@@ -429,6 +437,12 @@
       </main>
     </div>
     <script src="/socket.io/socket.io.js"></script>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
     <script src="/app.js"></script>
   </body>
 </html>

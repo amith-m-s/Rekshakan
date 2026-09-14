@@ -31,6 +31,11 @@ describe("API rescue workflow", () => {
     expect(page.text).toContain("RESIDENT SAFETY");
     expect(page.text).toContain("Responder operations");
     expect(page.text).toContain("Operational map");
+    expect(page.text).toContain("leaflet@1.9.4");
+    expect(page.text).toContain("leaflet.heat@0.2.0");
+    expect(page.headers["content-security-policy"]).toContain(
+      "https://*.tile.openstreetmap.org",
+    );
   });
   it("returns a responder-scoped profile with latest location", async () => {
     const own = await request(app)
