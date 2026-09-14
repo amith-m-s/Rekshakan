@@ -1,4 +1,4 @@
-import { updateZoneStatus } from '@/lib/data';
+import { ReadOnlyZoneError, updateZoneStatus } from '@/lib/data';
 import { ZONE_STATUSES, type ZoneStatus } from '@/lib/types';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -12,6 +12,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { source } = await updateZoneStatus(id, status as ZoneStatus);
     return Response.json({ id, status, source });
   } catch (e) {
-    return Response.json({ error: (e as Error).message }, { status: 404 });
+    const code = e instanceof ReadOnlyZoneError ? 409 : 404;
+    return Response.json({ error: (e as Error).message }, { status: code });
   }
 }

@@ -7,14 +7,14 @@ create table if not exists public.zones (
   name text not null,
   population integer not null default 0,
   status text not null default 'normal'
-    check (status in ('normal', 'advisory', 'warning', 'order', 'repopulation')),
+    check (status in ('normal', 'advisory', 'warning', 'order', 'shelter', 'repopulation')),
   geom jsonb not null, -- GeoJSON Polygon
   updated_at timestamptz not null default now()
 );
 
 create table if not exists public.alerts (
   id uuid primary key default gen_random_uuid(),
-  zone_id uuid not null references public.zones(id) on delete cascade,
+  zone_id text not null, -- a zones.id uuid, or "caloes-<objectid>" for live statewide zones
   zone_code text not null,
   status text not null,
   messages jsonb not null, -- { "en": "...", "es": "..." }

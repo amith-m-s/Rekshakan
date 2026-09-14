@@ -1,8 +1,18 @@
 # RescuerMap
 
-Wildfire evacuation-zone dashboard for California (demo region: Santa Cruz Mountains).
-Next.js 16 app with a Leaflet/CARTO map, NASA FIRMS hotspots, Open-Meteo wind, OSRM routing,
-Groq-written multilingual alerts, and Supabase storage.
+Wildfire evacuation dashboard for California.
+Next.js 16 app with a Leaflet/CARTO map, live Cal OES evacuation zones, statewide NASA FIRMS
+hotspots, per-zone Open-Meteo wind, OSRM routing, Groq-written multilingual alerts, and Supabase storage.
+
+## Data
+
+- **Live zones** come from the [Cal OES evacuation aggregation layer](https://data.ca.gov/dataset/california-evacuation-aggregation-layer)
+  (public, no key). It only contains zones under an active order or warning, has no population, and is
+  read-only here: status is set by the counties.
+- **Demo zones** (Santa Cruz Mountains) live in the Supabase `zones` table, or `lib/seed.ts` until the
+  schema is run. Their status can be edited from the dashboard.
+- **Threat score** = 0.6 × proximity to the nearest hotspot (within 20 km) + 0.3 × wind alignment × proximity
+  + 0.1 × population share (demo zones only).
 
 ## Setup
 
@@ -26,9 +36,9 @@ All external calls go through these server routes.
 
 | Route | Purpose |
 | --- | --- |
-| `GET /api/zones` | Zones scored by threat (fires + wind), sorted highest first |
-| `PATCH /api/zones/:id` | `{ status }` — change a zone's evacuation status |
-| `GET /api/fires?bbox=` | FIRMS VIIRS hotspots (last 2 days) |
+| `GET /api/zones` | Live + demo zones scored by threat (fires + per-zone wind), sorted highest first |
+| `PATCH /api/zones/:id` | `{ status }` — change a demo zone's status (409 for live zones) |
+| `GET /api/fires?bbox=` | FIRMS VIIRS hotspots (last 2 days, defaults to all of California) |
 | `GET /api/weather?lat=&lng=` | Open-Meteo current wind |
 | `GET /api/geocode?q=` | Nominatim lookup → `{ lat, lon }` |
 | `GET /api/route?from=lng,lat&to=lng,lat` | OSRM driving route → GeoJSON LineString |

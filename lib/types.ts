@@ -1,14 +1,21 @@
-export type ZoneStatus = 'normal' | 'advisory' | 'warning' | 'order' | 'repopulation';
+export type ZoneStatus = 'normal' | 'advisory' | 'warning' | 'order' | 'shelter' | 'repopulation';
 
-export const ZONE_STATUSES: ZoneStatus[] = ['normal', 'advisory', 'warning', 'order', 'repopulation'];
+export const ZONE_STATUSES: ZoneStatus[] = ['normal', 'advisory', 'warning', 'order', 'shelter', 'repopulation'];
+
+// caloes: live statewide feed (read-only, status set by counties). demo: Supabase table or lib/seed.ts.
+export type ZoneOrigin = 'caloes' | 'demo';
 
 export interface Zone {
   id: string;
   code: string;
   name: string;
-  population: number;
+  population: number | null;
   status: ZoneStatus;
-  geom: GeoJSON.Polygon;
+  geom: GeoJSON.Polygon | GeoJSON.MultiPolygon;
+  origin?: ZoneOrigin;
+  county?: string | null;
+  notes?: string | null;
+  updatedAt?: string | null;
 }
 
 export interface Fire {
@@ -35,16 +42,22 @@ export interface Threat {
 
 export interface ScoredZone extends Zone {
   threat: Threat;
+  wind: Wind | null;
+  areaKm2: number;
 }
 
-// Where data came from: the Supabase tables, or lib/seed.ts when the tables are missing/unreachable.
+// Where demo zones came from: the Supabase tables, or lib/seed.ts when the tables are missing/unreachable.
 export type DataSource = 'supabase' | 'seed';
 
 export interface ZonesResponse {
   zones: ScoredZone[];
-  wind: Wind;
   fireCount: number;
-  source: DataSource;
+  sources: {
+    live: 'caloes' | 'unavailable';
+    demo: DataSource;
+    // Live zones dropped because the county hasn't updated them in months.
+    staleHidden: number;
+  };
 }
 
 export interface AlertRecord {

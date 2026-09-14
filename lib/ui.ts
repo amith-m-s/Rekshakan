@@ -5,6 +5,7 @@ export const STATUS_COLOR: Record<ZoneStatus, string> = {
   advisory: '#eab308',
   warning: '#f97316',
   order: '#dc2626',
+  shelter: '#a855f7',
   repopulation: '#3b82f6',
 };
 
@@ -24,9 +25,10 @@ export const LANGUAGES: { code: string; label: string }[] = [
   { code: 'tl', label: 'Tagalog' },
 ];
 
-// [[south, west], [north, east]] of the outer ring.
+// [[south, west], [north, east]] of all outer rings (Polygon or MultiPolygon).
 export function zoneBounds(zone: Zone): [[number, number], [number, number]] {
-  const ring = zone.geom.coordinates[0];
+  const polygons = zone.geom.type === 'Polygon' ? [zone.geom.coordinates] : zone.geom.coordinates;
+  const ring = polygons.flatMap(p => p[0]);
   const lngs = ring.map(p => p[0]);
   const lats = ring.map(p => p[1]);
   return [

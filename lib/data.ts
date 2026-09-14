@@ -11,16 +11,21 @@ export async function getZones(): Promise<{ zones: Zone[]; source: DataSource }>
   const sb = getSupabase();
   if (sb) {
     const { data, error } = await sb.from('zones').select('id, code, name, population, status, geom').order('code');
-    if (!error && data?.length) return { zones: data as Zone[], source: 'supabase' };
+    if (!error && data?.length) return { zones: (data as Zone[]).map(z => ({ ...z, origin: 'demo' })), source: 'supabase' };
     if (error) console.warn('[data] zones query failed, using seed:', error.message);
   }
   return {
-    zones: seedZones.map(z => ({ ...z, status: seedState.get(z.id) ?? z.status })),
+    zones: seedZones.map(z => ({ ...z, origin: 'demo', status: seedState.get(z.id) ?? z.status })),
     source: 'seed',
   };
 }
 
+export class ReadOnlyZoneError extends Error {}
+
 export async function updateZoneStatus(id: string, status: ZoneStatus): Promise<{ source: DataSource }> {
+  if (id.startsWith('caloes-')) {
+    throw new ReadOnlyZoneError('live Cal OES zones are read-only; their status is set by the county');
+  }
   const sb = getSupabase();
   if (sb && !id.startsWith('seed-')) {
     const { data, error } = await sb.from('zones').update({ status }).eq('id', id).select('id');
@@ -48,7 +53,7 @@ export async function listAlerts(limit = 20): Promise<AlertRecord[]> {
 
 export async function saveAlert(alert: Omit<AlertRecord, 'id' | 'created_at'>): Promise<AlertRecord> {
   const sb = getSupabase();
-  if (sb && !alert.zone_id.startsWith('seed-')) {
+  if (sb) {
     const { data, error } = await sb.from('alerts').insert(alert).select().single();
     if (!error) return data as AlertRecord;
     console.warn('[data] alert insert failed, using memory:', error.message);

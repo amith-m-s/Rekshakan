@@ -1,8 +1,8 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useCallback, useEffect, useState } from 'react';
-import type { AlertRecord, Fire, Report, ZoneStatus, ZonesResponse } from '@/lib/types';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { AlertRecord, Fire, Report, ScoredZone, ZoneStatus, ZonesResponse } from '@/lib/types';
 import { ZONE_STATUSES } from '@/lib/types';
 import { LANGUAGES, REPORT_COLOR, STATUS_COLOR, compass, timeAgo, zoneCenter } from '@/lib/ui';
 
@@ -19,6 +19,8 @@ async function getJSON<T>(url: string, init?: RequestInit): Promise<T> {
   return body;
 }
 
+type OriginFilter = 'all' | 'caloes' | 'demo';
+
 export default function Dashboard() {
   const [data, setData] = useState<ZonesResponse | null>(null);
   const [fires, setFires] = useState<Fire[]>([]);
@@ -27,10 +29,18 @@ export default function Dashboard() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [focusReport, setFocusReport] = useState<Report | null>(null);
   const [route, setRoute] = useState<GeoJSON.LineString | null>(null);
+  const [query, setQuery] = useState('');
+  const [origin, setOrigin] = useState<OriginFilter>('all');
   const [error, setError] = useState<string | null>(null);
 
   const loadZones = useCallback(
-    () => getJSON<ZonesResponse>('/api/zones').then(setData).catch(e => setError(e.message)),
+    () =>
+      getJSON<ZonesResponse>('/api/zones')
+        .then(d => {
+          setData(d);
+          setError(null);
+        })
+        .catch(e => setError(e.message)),
     []
   );
   const loadReports = useCallback(
@@ -46,37 +56,56 @@ export default function Dashboard() {
     loadReports();
     loadAlerts();
     const timers = [
-      setInterval(loadZones, 60_000),
+      setInterval(loadZones, 120_000),
       setInterval(loadFires, 300_000),
       setInterval(loadReports, 10_000),
     ];
     return () => timers.forEach(clearInterval);
   }, [loadZones, loadReports, loadAlerts]);
 
-  const zones = data?.zones ?? [];
+  const zones = useMemo(() => data?.zones ?? [], [data]);
   const selected = zones.find(z => z.id === selectedId) ?? null;
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return zones.filter(
+      z =>
+        (origin === 'all' || z.origin === origin) &&
+        (!q || [z.code, z.name, z.county ?? '', z.notes ?? ''].some(s => s.toLowerCase().includes(q)))
+    );
+  }, [zones, query, origin]);
+
+  const live = zones.filter(z => z.origin === 'caloes');
+  const orders = live.filter(z => z.status === 'order').length;
 
   return (
     <div className="flex h-full flex-col md:flex-row">
       <aside className="flex w-full shrink-0 flex-col overflow-y-auto border-zinc-800 bg-zinc-950 md:h-full md:w-[400px] md:border-r">
         <header className="border-b border-zinc-800 p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <h1 className="text-lg font-semibold tracking-tight">RescuerMap</h1>
             {data && (
-              <span
-                className={`rounded px-2 py-0.5 text-xs ${data.source === 'supabase' ? 'bg-emerald-900/60 text-emerald-300' : 'bg-amber-900/60 text-amber-300'}`}
-                title={data.source === 'seed' ? 'Supabase tables not found; run supabase/schema.sql' : 'Live from Supabase'}
-              >
-                {data.source === 'supabase' ? 'Supabase' : 'Seed data'}
-              </span>
+              <div className="flex gap-1.5 text-xs">
+                <Badge ok={data.sources.live === 'caloes'} label={data.sources.live === 'caloes' ? 'Cal OES live' : 'Cal OES down'} />
+                <Badge
+                  ok={data.sources.demo === 'supabase'}
+                  label={data.sources.demo === 'supabase' ? 'Supabase' : 'Seed data'}
+                  title={data.sources.demo === 'seed' ? 'Supabase tables not found; run supabase/schema.sql' : undefined}
+                />
+              </div>
             )}
           </div>
-          <p className="text-xs text-zinc-500">Santa Cruz Mountains, California</p>
+          <p className="text-xs text-zinc-500">California wildfire evacuations</p>
           <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+            <Stat label="Active zones" value={data ? String(live.length) : '–'} />
+            <Stat label="Orders" value={data ? String(orders) : '–'} />
             <Stat label="Hotspots" value={data ? String(fires.length || data.fireCount) : '–'} />
-            <Stat label="Wind" value={data ? `${data.wind.speed.toFixed(0)} km/h` : '–'} />
-            <Stat label="Blowing" value={data ? `→ ${compass(data.wind.direction)}` : '–'} />
           </div>
+          {!!data?.sources.staleHidden && (
+            <p className="mt-2 text-xs text-zinc-500">
+              {data.sources.staleHidden} stale zone{data.sources.staleHidden === 1 ? '' : 's'} hidden (not updated in 90+ days).
+            </p>
+          )}
           {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
         </header>
 
@@ -91,10 +120,30 @@ export default function Dashboard() {
           />
         ) : (
           <section className="p-4">
-            <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">Zones by threat</h2>
+            <div className="mb-2 flex gap-2">
+              <input
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Search zone, county, fire…"
+                className="min-w-0 flex-1 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm"
+              />
+              <select
+                value={origin}
+                onChange={e => setOrigin(e.target.value as OriginFilter)}
+                className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm"
+              >
+                <option value="all">All</option>
+                <option value="caloes">Live</option>
+                <option value="demo">Demo</option>
+              </select>
+            </div>
+            <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
+              Zones by threat <span className="text-zinc-600">({visible.length})</span>
+            </h2>
             {!data && <p className="text-sm text-zinc-500">Loading zones…</p>}
+            {data && !visible.length && <p className="text-sm text-zinc-500">No zones match.</p>}
             <ul className="space-y-1.5">
-              {zones.map(z => (
+              {visible.map(z => (
                 <li key={z.id}>
                   <button
                     onClick={() => setSelectedId(z.id)}
@@ -103,10 +152,12 @@ export default function Dashboard() {
                     <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: STATUS_COLOR[z.status] }} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium">
-                        {z.code} · {z.name}
+                        {z.code}
+                        <span className="ml-1.5 text-[10px] font-normal uppercase text-zinc-500">{z.origin === 'caloes' ? 'live' : 'demo'}</span>
                       </span>
-                      <span className="block text-xs text-zinc-500">
-                        {z.status} · pop {z.population.toLocaleString()}
+                      <span className="block truncate text-xs text-zinc-500">
+                        {z.county ? `${z.county} · ` : `${z.name} · `}
+                        {z.status}
                         {z.threat.km !== null && ` · fire ${z.threat.km.toFixed(1)} km`}
                       </span>
                     </span>
@@ -177,6 +228,17 @@ export default function Dashboard() {
   );
 }
 
+function Badge({ ok, label, title }: { ok: boolean; label: string; title?: string }) {
+  return (
+    <span
+      title={title}
+      className={`rounded px-2 py-0.5 ${ok ? 'bg-emerald-900/60 text-emerald-300' : 'bg-amber-900/60 text-amber-300'}`}
+    >
+      {label}
+    </span>
+  );
+}
+
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-md bg-zinc-900 px-2 py-1.5">
@@ -227,15 +289,15 @@ function ZonePanel({
   onAlertIssued,
   onRoute,
 }: {
-  zone: ZonesResponse['zones'][number];
+  zone: ScoredZone;
   onBack: () => void;
   onStatusChanged: () => Promise<unknown>;
   onAlertIssued: () => Promise<unknown>;
   onRoute: (r: GeoJSON.LineString | null) => void;
 }) {
+  const readOnly = zone.origin === 'caloes';
   const [savingStatus, setSavingStatus] = useState(false);
-  // "Santa Cruz, CA" geocodes to the county centroid, a few km from the zones; use a real shelter site.
-  const [destination, setDestination] = useState('Santa Cruz County Fairgrounds');
+  const [destination, setDestination] = useState('');
   const [routeInfo, setRouteInfo] = useState<string | null>(null);
   const [routing, setRouting] = useState(false);
   const [langs, setLangs] = useState<string[]>(['en', 'es']);
@@ -274,7 +336,7 @@ function ZonePanel({
       const from = zoneCenter(zone);
       const line = await getJSON<GeoJSON.LineString>(`/api/route?from=${from.lng},${from.lat}&to=${dest.lon},${dest.lat}`);
       onRoute(line);
-      setRouteInfo(`Route to ${destination} plotted (${line.coordinates.length} points).`);
+      setRouteInfo(`Route to ${destination} plotted.`);
     } catch (e) {
       onRoute(null);
       setPanelError((e as Error).message);
@@ -291,7 +353,11 @@ function ZonePanel({
       const res = await getJSON<Record<string, string>>('/api/alert', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ zone, status: alertStatus, langs }),
+        body: JSON.stringify({
+          zone: { id: zone.id, code: zone.code, name: zone.county ? `${zone.county} County` : zone.name, population: zone.population },
+          status: alertStatus,
+          langs,
+        }),
       });
       setMessages(res);
       await onAlertIssued();
@@ -310,53 +376,74 @@ function ZonePanel({
         <button onClick={onBack} className="mb-2 text-xs text-zinc-400 hover:text-zinc-200">
           ← All zones
         </button>
-        <h2 className="text-base font-semibold">
-          {zone.code} · {zone.name}
-        </h2>
-        <p className="text-xs text-zinc-500">Population {zone.population.toLocaleString()}</p>
+        <h2 className="text-base font-semibold">{zone.code}</h2>
+        <p className="text-xs text-zinc-500">
+          {zone.county ? `${zone.county} County` : zone.name}
+          {' · '}
+          {readOnly ? 'Live from Cal OES' : 'Demo zone'}
+          {zone.updatedAt && ` · updated ${timeAgo(zone.updatedAt)}`}
+        </p>
+        {zone.notes && <p className="mt-2 rounded bg-zinc-900 p-2 text-xs text-zinc-300">{zone.notes}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-xs">
         <Stat label="Threat score" value={t.score.toFixed(2)} />
-        <Stat label="Nearest fire" value={t.km === null ? 'none' : `${t.km.toFixed(1)} km`} />
-        <Stat label="Proximity" value={t.proximity.toFixed(2)} />
+        <Stat label="Nearest hotspot" value={t.km === null ? 'none' : `${t.km.toFixed(1)} km`} />
+        <Stat label="Wind" value={zone.wind ? `${zone.wind.speed.toFixed(0)} km/h → ${compass(zone.wind.direction)}` : 'n/a'} />
         <Stat label="Wind alignment" value={t.alignment.toFixed(2)} />
+        <Stat label="Area" value={`${zone.areaKm2.toFixed(1)} km²`} />
+        <Stat label="Population" value={zone.population === null ? 'unknown' : zone.population.toLocaleString()} />
       </div>
 
       <div>
         <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-zinc-500">Zone status</label>
-        <div className="grid grid-cols-3 gap-1.5">
-          {ZONE_STATUSES.map(s => (
-            <button
-              key={s}
-              disabled={savingStatus}
-              onClick={() => changeStatus(s)}
-              className={`rounded border px-2 py-1 text-xs capitalize disabled:opacity-50 ${zone.status === s ? 'border-transparent text-black' : 'border-zinc-700 text-zinc-300 hover:border-zinc-500'}`}
-              style={zone.status === s ? { background: STATUS_COLOR[s] } : undefined}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
+        {readOnly ? (
+          <p className="text-sm">
+            <span className="rounded px-2 py-0.5 text-xs capitalize text-black" style={{ background: STATUS_COLOR[zone.status] }}>
+              {zone.status}
+            </span>
+            <span className="ml-2 text-xs text-zinc-500">Set by the county; read-only here.</span>
+          </p>
+        ) : (
+          <div className="grid grid-cols-3 gap-1.5">
+            {ZONE_STATUSES.map(s => (
+              <button
+                key={s}
+                disabled={savingStatus}
+                onClick={() => changeStatus(s)}
+                className={`rounded border px-2 py-1 text-xs capitalize disabled:opacity-50 ${zone.status === s ? 'border-transparent text-black' : 'border-zinc-700 text-zinc-300 hover:border-zinc-500'}`}
+                style={zone.status === s ? { background: STATUS_COLOR[s] } : undefined}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div>
         <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-zinc-500">Evacuation route</label>
-        <div className="flex gap-2">
+        <form
+          className="flex gap-2"
+          onSubmit={e => {
+            e.preventDefault();
+            planRoute();
+          }}
+        >
           <input
             value={destination}
             onChange={e => setDestination(e.target.value)}
             className="min-w-0 flex-1 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm"
-            placeholder="Shelter or town"
+            placeholder="Shelter, fairgrounds, or town"
           />
           <button
-            onClick={planRoute}
+            type="submit"
             disabled={routing || !destination.trim()}
             className="rounded bg-sky-600 px-3 py-1 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
           >
             {routing ? 'Routing…' : 'Route'}
           </button>
-        </div>
+        </form>
         {routeInfo && <p className="mt-1 text-xs text-sky-300">{routeInfo}</p>}
       </div>
 

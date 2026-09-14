@@ -50,7 +50,8 @@ export default function ZoneMap({ zones, fires, reports, route, selectedId, focu
   const selected = zones.find(z => z.id === selectedId);
 
   return (
-    <MapContainer center={[37.05, -122.05]} zoom={11} className="h-full w-full" zoomControl={false}>
+    // Canvas rendering keeps thousands of statewide hotspot markers responsive.
+    <MapContainer center={[37.2, -119.5]} zoom={6} className="h-full w-full" zoomControl={false} preferCanvas>
       <TileLayer
         url={CARTO_TILES}
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
