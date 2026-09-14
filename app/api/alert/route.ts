@@ -3,7 +3,15 @@ import { listAlerts, saveAlert } from '@/lib/data';
 
 export const dynamic = 'force-dynamic';
 
-const groq = new OpenAI({ apiKey: process.env.GROQ_API_KEY, baseURL: 'https://api.groq.com/openai/v1' });
+// Created on first use, not at module load: `next build` evaluates this file to collect route
+// config, and the SDK throws when the key is missing, which would fail builds without secrets.
+let groq: OpenAI | undefined;
+function getGroq() {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return null;
+  groq ??= new OpenAI({ apiKey, baseURL: 'https://api.groq.com/openai/v1' });
+  return groq;
+}
 
 const SYSTEM_PROMPT = `You write official wildfire evacuation alerts issued by county emergency management.
 Rules:
@@ -17,6 +25,11 @@ export async function POST(req: Request) {
   const { zone, status, langs } = await req.json().catch(() => ({}));
   if (!zone?.code || !status || !Array.isArray(langs) || !langs.length) {
     return Response.json({ error: 'body must be { zone, status, langs: string[] }' }, { status: 400 });
+  }
+
+  const groq = getGroq();
+  if (!groq) {
+    return Response.json({ error: 'GROQ_API_KEY is not configured on the server' }, { status: 503 });
   }
 
   const completion = await groq.chat.completions.create({
