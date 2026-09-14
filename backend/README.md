@@ -58,13 +58,13 @@ console for exercising the backend, not the final production mobile experience.
 
 - `src/routes`: REST transport, validation and RBAC
 - `src/services`: severity, priority, matching, assignments, alerts, escalation, audit and simulator logic
-- `src/integrations/providers`: provider contracts and realistic mock adapters
+- `src/integrations/providers`: provider contracts, resilient cache wrapper, mock adapters, and optional FIRMS/Open-Meteo/OSRM/Nominatim/Groq adapters
 - `src/db`: SQLite schema, indexes and connection
 - `src/middleware`: JWT authorization, role checks, rate limiting integration and sanitized errors
 - `src/sockets`: represented by the Socket.IO bootstrap and runtime emitter
 - `src/seed`: repeatable fictional demo dataset
 
-All important workflow changes append an `audit_logs` row. There is intentionally no API to edit/delete audit rows. SQLite WAL mode keeps the single-node MVP responsive. Help creation never waits for an external provider.
+All important workflow changes append an `audit_logs` row. There is intentionally no API to edit/delete audit rows. Ordered migrations are recorded in `schema_migrations`, and SQLite WAL mode keeps the single-node MVP responsive. Help creation never waits for an external provider.
 
 Exact user location is private: users may read their own location, coordinators/admins may access operational location history, and responders only see the precise help request assigned to them. Location sharing and freshness state are stored explicitly.
 
@@ -108,8 +108,10 @@ Connect Socket.IO to port 4000 with `{ auth: { token } }`. Coordinators/admins m
 - `person.safe`, `shelter.status_changed`, `escalation.created`
 - `simulator.started`, `simulator.updated`
 
-Clients should refetch current REST state after reconnect; socket events are a live-update channel, not the source of truth.
+Clients should refetch current REST state after reconnect; socket events are a live-update channel, not the source of truth. Operational events are sent only to coordinator/admin role rooms and directly involved user rooms. Precise request and responder locations are never broadcast to every authenticated socket.
 
-## Future data integrations
+## Data integrations
 
-Implement the interfaces in `src/integrations/providers/index.ts`: `DisasterDataProvider`, `WeatherDataProvider`, `AlertDataProvider`, `ShelterDataProvider`, `RoadDataProvider`, and `AIAnalysisProvider`. Wire configured adapters into the provider registry and use `NASA_API_KEY`, `WEATHER_API_KEY` or `GROK_API_KEY` from the environment. Keep timestamps and `expiresAt`; expired cached values must be returned with `stale: true`. Provider failures should be caught/logged and fall back to the last valid marked-stale record. Core severity, priority, help, matching and assignment logic must remain in services, not adapters.
+Mock providers remain the default. Set `PROVIDER_MODE=real` to enable the implemented NASA FIRMS, Open-Meteo, OSRM, Nominatim and Groq adapters in `src/integrations/providers/real.ts`. Configure `NASA_API_KEY`, a policy-compliant `NOMINATIM_USER_AGENT`, and `GROQ_API_KEY` as needed.
+
+Every provider response includes its source, observation time, expiry and `stale` flag. Provider calls use a timeout and an in-process last-known-good cache; failures return cached data marked stale when available and otherwise produce a sanitized `503` without interrupting core rescue operations. AI output is always marked as a draft requiring coordinator approval. The simulator uses its own always-available provider even when real integrations fail.
