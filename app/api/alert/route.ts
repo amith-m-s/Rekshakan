@@ -1,4 +1,7 @@
 import OpenAI from 'openai';
+import { listAlerts, saveAlert } from '@/lib/data';
+
+export const dynamic = 'force-dynamic';
 
 const groq = new OpenAI({ apiKey: process.env.GROQ_API_KEY, baseURL: 'https://api.groq.com/openai/v1' });
 
@@ -32,9 +35,18 @@ Languages: ${langs.join(', ')}.`,
   });
 
   const content = completion.choices[0]?.message?.content ?? '';
+  let messages: Record<string, string>;
   try {
-    return Response.json(JSON.parse(content));
+    messages = JSON.parse(content);
   } catch {
     return Response.json({ error: 'model returned invalid JSON', raw: content }, { status: 502 });
   }
+
+  // Keep a log of issued alerts when the caller identifies the zone.
+  if (zone.id) await saveAlert({ zone_id: zone.id, zone_code: zone.code, status, messages });
+  return Response.json(messages);
+}
+
+export async function GET() {
+  return Response.json(await listAlerts());
 }
