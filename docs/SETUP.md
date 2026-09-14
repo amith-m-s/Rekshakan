@@ -241,19 +241,31 @@ but needs access to that repo.
    npx vercel deploy --prod
    ```
 
-### Option B: Deploy from GitHub
+### Option B: Deploy from GitHub (the current setup)
 
-1. Ask `amith-m-s` to either add you as a collaborator on `Rekshakan`, or import the project into their
-   own Vercel account and add you to the team.
-2. Push this branch so it exists on GitHub:
-   ```powershell
-   git push -u origin feature/dashboard-supabase
-   ```
-3. In Vercel: **Add New… → Project → Import** the `Rekshakan` repository. Framework preset **Next.js**;
-   leave the build settings at their defaults.
-4. Before clicking **Deploy**, expand **Environment Variables** and paste `.env.local` (same as step 3 of
-   Option A).
-5. Every push to a branch creates a preview; merging to `main` deploys production.
+The project is imported from `amith-m-s/Rekshakan` into a Vercel account, with the Supabase integration
+connected. Production builds `main`; every other pushed branch gets a preview.
+
+1. **Get the dashboard onto `main`:** open a pull request from `feature/dashboard-supabase` into `main`:
+   <https://github.com/amith-m-s/Rekshakan/compare/main...feature/dashboard-supabase?expand=1>.
+   When it's merged, Vercel deploys production automatically.
+   - Vercel also builds a **preview** of the branch as soon as it's pushed. Check that it builds
+     (Vercel → project → **Deployments**) before merging.
+   - The repo root is the Next.js dashboard. `backend/` is a separate Express app and is excluded from the
+     Next.js type check and lint; Vercel doesn't build or run it.
+2. **Check the environment variables** (Vercel → project → **Settings → Environment Variables**).
+   The Supabase integration adds the Supabase ones for you. Confirm these exist for **Production** and
+   **Preview**:
+   - From the integration: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+     `SUPABASE_SERVICE_ROLE_KEY` (it also adds `POSTGRES_*` and other `SUPABASE_*` variables the app
+     doesn't use; leave them).
+   - Add by hand: `FIRMS_MAP_KEY`, `GROQ_API_KEY` (the new key from Part 1), `NEXT_PUBLIC_CARTO_KEY`,
+     `DASHBOARD_PASSWORD`.
+   - If the integration named a variable differently (for example `SUPABASE_ANON_KEY` without
+     `NEXT_PUBLIC_`), add a copy under the name above.
+3. **Run the schema** (Part 2.2) in the Supabase project the integration connected. The integration
+   connects the database but doesn't create the tables.
+4. After changing variables, **redeploy**: Deployments → latest → **⋯ → Redeploy**.
 
 ### 4.2 Recommended project settings
 
