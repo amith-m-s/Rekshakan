@@ -1,5 +1,27 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## RescuerMap backend
+
+The production-style hackathon backend and its local testing console live in
+[`backend/`](./backend). It provides authentication and RBAC, incidents,
+locations, alerts, help requests, responder matching, validated rescue
+assignments, shelters, escalation recommendations, audit timelines, analytics,
+Socket.IO events, mock external-data providers, and a wildfire simulator.
+
+```bash
+cd backend
+cp .env.example .env
+npm install
+npm run migrate
+npm run seed
+npm start
+```
+
+Open the local test console at [http://localhost:4000](http://localhost:4000)
+or the API documentation at [http://localhost:4000/docs](http://localhost:4000/docs).
+See [`backend/README.md`](./backend/README.md) for demo credentials and complete
+usage instructions.
+
 ## Getting Started
 
 First, run the development server:
