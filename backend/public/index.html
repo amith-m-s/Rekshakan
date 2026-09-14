@@ -43,11 +43,47 @@
           <div><strong>RescuerMap</strong><span>Test Console</span></div>
         </div>
         <nav>
-          <button class="nav active" data-target="overview">Overview</button>
-          <button class="nav" data-target="requests">Help requests</button>
-          <button class="nav" data-target="assignments">Assignments</button>
-          <button class="nav" data-target="simulator">Simulator</button>
-          <button class="nav" data-target="timeline">Audit timeline</button>
+          <button class="nav" data-target="resident" data-roles="RESIDENT">
+            Resident home
+          </button>
+          <button class="nav" data-target="responder" data-roles="RESPONDER">
+            Responder home
+          </button>
+          <button
+            class="nav active"
+            data-target="overview"
+            data-roles="COORDINATOR,ADMIN"
+          >
+            Command centre
+          </button>
+          <button
+            class="nav"
+            data-target="requests"
+            data-roles="RESIDENT,COORDINATOR,ADMIN"
+          >
+            Help requests
+          </button>
+          <button
+            class="nav"
+            data-target="assignments"
+            data-roles="RESPONDER,COORDINATOR,ADMIN"
+          >
+            Assignments
+          </button>
+          <button
+            class="nav"
+            data-target="simulator"
+            data-roles="COORDINATOR,ADMIN"
+          >
+            Simulator
+          </button>
+          <button
+            class="nav"
+            data-target="timeline"
+            data-roles="COORDINATOR,ADMIN"
+          >
+            Audit timeline
+          </button>
         </nav>
         <div class="sidebar-foot">
           <span id="socketState" class="connection"><i></i> Connecting</span
@@ -69,7 +105,63 @@
           </div>
         </header>
 
-        <section id="overview" class="panel-view">
+        <section id="resident" class="panel-view hidden">
+          <div class="phone-stage">
+            <article class="phone-card resident-phone">
+              <div class="mobile-top">
+                <div>
+                  <p class="eyebrow">RESIDENT SAFETY</p>
+                  <strong>RescuerMap</strong>
+                </div>
+                <span class="live-pill">● LIVE</span>
+              </div>
+              <div id="residentAlert" class="resident-alert"></div>
+              <div class="emergency-actions">
+                <button id="residentHelpBtn" class="sos-button">
+                  <span>SOS</span><strong>I need help</strong
+                  ><small>Request immediate assistance</small></button
+                ><button id="residentSafeBtn" class="safe-button">
+                  <span>✓</span><strong>I'm safe</strong>
+                </button>
+              </div>
+              <div id="residentRequestStatus" class="resident-status"></div>
+              <div id="residentShelter" class="nearby-shelter"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="responder" class="panel-view hidden">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">VERIFIED COMMUNITY RESPONSE</p>
+              <h2>Responder operations</h2>
+            </div>
+            <span class="live-pill">● LIVE</span>
+          </div>
+          <div class="grid two responder-grid">
+            <article class="card">
+              <div id="responderProfile"></div>
+              <button id="availabilityBtn" class="primary wide">
+                Update availability
+              </button>
+            </article>
+            <article class="card mission-card">
+              <p class="eyebrow">ACTIVE MISSION</p>
+              <div id="activeMission"></div>
+            </article>
+          </div>
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <p class="eyebrow">MY ASSIGNMENTS</p>
+                <h3>Mission history</h3>
+              </div>
+            </div>
+            <div id="responderAssignments" class="table-wrap"></div>
+          </article>
+        </section>
+
+        <section id="overview" class="panel-view hidden">
           <div class="notice">
             <strong>Simulation environment</strong
             ><span
@@ -78,6 +170,34 @@
             >
           </div>
           <div id="stats" class="stats"></div>
+          <div class="grid command-grid">
+            <article class="card map-card">
+              <div class="card-head">
+                <div>
+                  <p class="eyebrow">LIVE GEOGRAPHY</p>
+                  <h3>Operational map</h3>
+                </div>
+                <div class="map-legend">
+                  <span class="fire-key">Fire</span
+                  ><span class="request-key">Help</span
+                  ><span class="responder-key">Responder</span
+                  ><span class="shelter-key">Shelter</span>
+                </div>
+              </div>
+              <div id="operationalMap" class="operational-map"></div>
+            </article>
+            <article class="card">
+              <div class="card-head">
+                <div>
+                  <p class="eyebrow">EXPLAINABLE ENGINE</p>
+                  <h3>Severity factors</h3>
+                </div>
+                <span id="severityBadge" class="status neutral">—</span>
+              </div>
+              <div id="severityFactors" class="factor-list"></div>
+              <div id="severityReasons" class="reason-list"></div>
+            </article>
+          </div>
           <div class="grid two">
             <article class="card">
               <div class="card-head">
@@ -111,6 +231,21 @@
               <button class="link-nav" data-go="requests">View all →</button>
             </div>
             <div id="requestPreview" class="table-wrap"></div>
+          </article>
+          <article id="escalationPanel" class="card escalation-card">
+            <div class="card-head">
+              <div>
+                <p class="eyebrow">HUMAN AUTHORIZATION</p>
+                <h3>Escalation recommendation</h3>
+              </div>
+              <button id="reviewEscalationBtn" class="secondary">
+                Evaluate incident
+              </button>
+            </div>
+            <div id="escalationRecommendation" class="muted">
+              Run an evaluation to see whether additional authorized response is
+              recommended.
+            </div>
           </article>
         </section>
 

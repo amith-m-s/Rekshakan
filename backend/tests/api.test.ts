@@ -28,6 +28,22 @@ describe("API rescue workflow", () => {
     const page = await request(app).get("/");
     expect(page.status).toBe(200);
     expect(page.text).toContain("RescuerMap Test Console");
+    expect(page.text).toContain("RESIDENT SAFETY");
+    expect(page.text).toContain("Responder operations");
+    expect(page.text).toContain("Operational map");
+  });
+  it("returns a responder-scoped profile with latest location", async () => {
+    const own = await request(app)
+      .get("/api/responders/me")
+      .set("Authorization", `Bearer ${responder}`);
+    expect(own.status).toBe(200);
+    expect(own.body.data.user_id).toBe("usr_responder");
+    expect(own.body.data.latitude).toBeTypeOf("number");
+    expect(own.body.data.capabilities).toContain("MEDICAL_FIRST_AID");
+    const denied = await request(app)
+      .get("/api/responders/me")
+      .set("Authorization", `Bearer ${resident}`);
+    expect(denied.status).toBe(403);
   });
   it("protects coordinator resources", async () => {
     expect(
