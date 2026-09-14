@@ -5,7 +5,7 @@ services:
     plan: free
     region: singapore
     rootDir: backend
-    buildCommand: npm ci && npm run build
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm run start:render
     healthCheckPath: /api/health
     autoDeployTrigger: commit
