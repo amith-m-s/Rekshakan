@@ -4,6 +4,31 @@ Wildfire evacuation dashboard for California.
 Next.js 16 app with a Leaflet/CARTO map, live Cal OES evacuation zones, statewide NASA FIRMS
 hotspots, per-zone Open-Meteo wind, OSRM routing, Groq-written multilingual alerts, and Supabase storage.
 
+The repository root is the Next.js dashboard (deployed on Vercel). The separate Express backend lives in
+[`backend/`](./backend) and is excluded from the dashboard's TypeScript and lint config.
+
+## RescuerMap backend (`backend/`)
+
+The production-style hackathon backend and its local testing console live in
+[`backend/`](./backend). It provides authentication and RBAC, incidents,
+locations, alerts, help requests, responder matching, validated rescue
+assignments, shelters, escalation recommendations, audit timelines, analytics,
+Socket.IO events, mock external-data providers, and a wildfire simulator.
+
+```bash
+cd backend
+cp .env.example .env
+npm install
+npm run migrate
+npm run seed
+npm start
+```
+
+Open the local test console at [http://localhost:4000](http://localhost:4000)
+or the API documentation at [http://localhost:4000/docs](http://localhost:4000/docs).
+See [`backend/README.md`](./backend/README.md) for demo credentials and complete
+usage instructions.
+
 ## Data
 
 - **Live zones** come from the [Cal OES evacuation aggregation layer](https://data.ca.gov/dataset/california-evacuation-aggregation-layer)

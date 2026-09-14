@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Separate Express app with its own package.json, tsconfig and lint setup.
+    "backend/**",
   ]),
 ]);
 

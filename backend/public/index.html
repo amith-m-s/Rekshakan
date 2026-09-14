@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>RescuerMap Test Console</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div id="toast" class="toast" aria-live="polite"></div>
+    <section id="loginView" class="login-shell">
+      <div class="login-card">
+        <div class="brand-mark">R</div>
+        <p class="eyebrow">LOCAL TEST CONSOLE</p>
+        <h1>RescuerMap</h1>
+        <p class="muted">
+          Sign in with a fictional demo role to test the rescue workflow.
+        </p>
+        <label
+          >Demo role<select id="accountSelect">
+            <option value="coordinator@rescuermap.local">Coordinator</option>
+            <option value="resident@rescuermap.local">Resident</option>
+            <option value="responder@rescuermap.local">Responder</option>
+            <option value="admin@rescuermap.local">Admin</option>
+          </select></label
+        >
+        <label
+          >Password<input id="password" type="password" value="Demo123!"
+        /></label>
+        <button id="loginBtn" class="primary wide">Enter console</button>
+        <p id="loginError" class="error"></p>
+        <p class="fine">
+          No real emergency services are contacted. All demo records are
+          simulated.
+        </p>
+      </div>
+    </section>
+
+    <div id="appView" class="app hidden">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark small">R</div>
+          <div><strong>RescuerMap</strong><span>Test Console</span></div>
+        </div>
+        <nav>
+          <button class="nav active" data-target="overview">Overview</button>
+          <button class="nav" data-target="requests">Help requests</button>
+          <button class="nav" data-target="assignments">Assignments</button>
+          <button class="nav" data-target="simulator">Simulator</button>
+          <button class="nav" data-target="timeline">Audit timeline</button>
+        </nav>
+        <div class="sidebar-foot">
+          <span id="socketState" class="connection"><i></i> Connecting</span
+          ><button id="logoutBtn" class="ghost">Sign out</button>
+        </div>
+      </aside>
+      <main>
+        <header>
+          <div>
+            <p class="eyebrow">DISASTER COORDINATION</p>
+            <h2 id="pageTitle">Operational overview</h2>
+          </div>
+          <div class="user-chip">
+            <span id="userInitial">M</span>
+            <div>
+              <strong id="userName">User</strong
+              ><small id="userRole">ROLE</small>
+            </div>
+          </div>
+        </header>
+
+        <section id="overview" class="panel-view">
+          <div class="notice">
+            <strong>Simulation environment</strong
+            ><span
+              >This console recommends and coordinates assistance. Human
+              authorization is always required.</span
+            >
+          </div>
+          <div id="stats" class="stats"></div>
+          <div class="grid two">
+            <article class="card">
+              <div class="card-head">
+                <div>
+                  <p class="eyebrow">ACTIVE EVENT</p>
+                  <h3>Incident status</h3>
+                </div>
+                <select id="incidentSelect"></select>
+              </div>
+              <div id="incidentCard" class="incident-empty">
+                No incident selected
+              </div>
+            </article>
+            <article class="card">
+              <div class="card-head">
+                <div>
+                  <p class="eyebrow">FIELD SIGNALS</p>
+                  <h3>Latest activity</h3>
+                </div>
+                <button id="refreshBtn" class="secondary">Refresh</button>
+              </div>
+              <div id="activity" class="activity"></div>
+            </article>
+          </div>
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <p class="eyebrow">PRIORITY QUEUE</p>
+                <h3>People needing assistance</h3>
+              </div>
+              <button class="link-nav" data-go="requests">View all →</button>
+            </div>
+            <div id="requestPreview" class="table-wrap"></div>
+          </article>
+        </section>
+
+        <section id="requests" class="panel-view hidden">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">ASSISTANCE</p>
+              <h2>Help requests</h2>
+            </div>
+            <button id="newRequestBtn" class="primary">
+              + Test help request
+            </button>
+          </div>
+          <div id="requestForm" class="card form-card hidden">
+            <h3>Create a simulated request</h3>
+            <div class="form-grid">
+              <label
+                >Category<select id="requestCategory">
+                  <option>EVACUATION</option>
+                  <option>MEDICAL</option>
+                  <option>TRANSPORTATION</option>
+                  <option>STRANDED</option>
+                  <option>OTHER</option>
+                </select></label
+              ><label
+                >People<input
+                  id="peopleCount"
+                  type="number"
+                  min="1"
+                  value="1" /></label
+              ><label class="span2"
+                >Description<input
+                  id="requestDescription"
+                  value="Testing assistance workflow" /></label
+              ><label
+                ><input id="medicalFlag" type="checkbox" /> Medical
+                emergency</label
+              ><label
+                ><input id="dangerFlag" type="checkbox" checked /> Immediate
+                danger</label
+              >
+            </div>
+            <div class="actions">
+              <button id="submitRequestBtn" class="primary">
+                Create request</button
+              ><button id="cancelRequestBtn" class="secondary">Cancel</button>
+            </div>
+          </div>
+          <article class="card">
+            <div id="requestsTable" class="table-wrap"></div>
+          </article>
+          <article id="matchCard" class="card hidden">
+            <div class="card-head">
+              <h3>Recommended responders</h3>
+              <button id="closeMatches" class="icon-btn">×</button>
+            </div>
+            <div id="matchResults"></div>
+          </article>
+        </section>
+
+        <section id="assignments" class="panel-view hidden">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">RESCUE WORKFLOW</p>
+              <h2>Assignments</h2>
+            </div>
+          </div>
+          <article class="card">
+            <div id="assignmentsTable" class="table-wrap"></div>
+          </article>
+        </section>
+
+        <section id="simulator" class="panel-view hidden">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">DEMO CONTROL</p>
+              <h2>Wildfire simulator</h2>
+            </div>
+            <span id="simStatus" class="status neutral">NOT STARTED</span>
+          </div>
+          <div class="grid two">
+            <article class="card">
+              <h3>Start scenario</h3>
+              <div class="form-grid">
+                <label
+                  >Latitude<input
+                    id="simLat"
+                    type="number"
+                    step=".0001"
+                    value="12.9716" /></label
+                ><label
+                  >Longitude<input
+                    id="simLng"
+                    type="number"
+                    step=".0001"
+                    value="77.5946" /></label
+                ><label
+                  >Initial severity<input
+                    id="simSeverity"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value="55" /></label
+                ><label
+                  >Responders<input
+                    id="simResponders"
+                    type="number"
+                    min="0"
+                    value="4"
+                /></label>
+              </div>
+              <button id="startSimBtn" class="danger wide">
+                Start new wildfire
+              </button>
+            </article>
+            <article class="card">
+              <h3>Scenario controls</h3>
+              <div class="control-grid">
+                <button data-action="INCREASE_SPREAD">Increase spread</button
+                ><button data-action="INCREASE_SEVERITY">Raise severity</button
+                ><button data-action="GENERATE_REPORTS">Generate reports</button
+                ><button data-action="GENERATE_HELP_REQUESTS">
+                  Generate requests</button
+                ><button data-action="GENERATE_RESPONDERS">
+                  Add responders</button
+                ><button data-action="TRIGGER_CRITICAL_STATE" class="danger">
+                  Trigger critical</button
+                ><button data-action="PAUSE">Pause</button
+                ><button data-action="RESUME">Resume</button
+                ><button data-action="RESET">Reset</button>
+              </div>
+              <p class="fine">
+                All simulator data enters the same backend services as
+                operational provider data.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section id="timeline" class="panel-view hidden">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">IMMUTABLE HISTORY</p>
+              <h2>Rescue timeline</h2>
+            </div>
+          </div>
+          <article class="card">
+            <label>Request<select id="timelineRequest"></select></label>
+            <div id="timelineEvents" class="timeline"></div>
+          </article>
+        </section>
+      </main>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>
