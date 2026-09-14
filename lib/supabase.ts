@@ -2,8 +2,9 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 let client: SupabaseClient | null | undefined;
 
-// Server-side client. Uses the service role key when present, otherwise the anon key
-// (which relies on the RLS policies in supabase/schema.sql). Returns null if unconfigured.
+// Server-side client. With SUPABASE_SERVICE_ROLE_KEY (the secret key) it can read and write.
+// With only the public key it can read, and writes fail on RLS so lib/data.ts falls back to memory.
+// Returns null if Supabase isn't configured at all.
 export function getSupabase(): SupabaseClient | null {
   if (client !== undefined) return client;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

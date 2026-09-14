@@ -1,5 +1,6 @@
 import { ReadOnlyZoneError, updateZoneStatus } from '@/lib/data';
 import { ZONE_STATUSES, type ZoneStatus } from '@/lib/types';
+import { invalidateScoredZones } from '@/lib/zones';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -10,6 +11,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   try {
     const { source } = await updateZoneStatus(id, status as ZoneStatus);
+    invalidateScoredZones();
     return Response.json({ id, status, source });
   } catch (e) {
     const code = e instanceof ReadOnlyZoneError ? 409 : 404;

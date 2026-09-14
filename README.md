@@ -16,19 +16,16 @@ hotspots, per-zone Open-Meteo wind, OSRM routing, Groq-written multilingual aler
 
 ## Setup
 
+Full step-by-step guide (keys, Supabase schema, Vercel deploy, checks): **[docs/SETUP.md](docs/SETUP.md)**.
+
+Quick version:
+
 1. `npm install`
-2. `.env.local`:
-   ```
-   FIRMS_MAP_KEY=
-   GROQ_API_KEY=
-   NEXT_PUBLIC_SUPABASE_URL=
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=
-   # optional: SUPABASE_SERVICE_ROLE_KEY=, GROQ_MODEL=
-   ```
-3. Supabase: open the project dashboard → SQL Editor → paste `supabase/schema.sql` → Run.
-   Until that is done the app runs on `lib/seed.ts` and keeps edits in memory
-   (the header badge shows "Seed data" instead of "Supabase").
-4. `npm run dev` → http://localhost:3000
+2. Fill `.env.local`: `FIRMS_MAP_KEY`, `GROQ_API_KEY`, `NEXT_PUBLIC_CARTO_KEY`, `NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and optionally `DASHBOARD_PASSWORD`.
+3. Run `supabase/schema.sql` in the Supabase SQL Editor. Until then the app uses `lib/seed.ts` and keeps
+   edits in memory (header badge "Seed data").
+4. `npm run build && npx next start` → http://localhost:3000
 
 ## API
 

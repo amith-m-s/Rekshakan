@@ -1,3 +1,4 @@
+import { inCalifornia } from './california';
 import type { Fire, Wind, Zone, ZoneStatus } from './types';
 
 // Rough California bounding box (west,south,east,north).
@@ -16,9 +17,9 @@ export async function fetchFires(bbox = DEFAULT_BBOX): Promise<Fire[]> {
   if (!head?.startsWith('latitude')) throw new Error(`FIRMS error: ${head?.slice(0, 120)}`);
   const cols = head.split(',');
 
-  return rows
-    .filter(Boolean)
-    .map(r => Object.fromEntries(r.split(',').map((v, i) => [cols[i], v])) as Fire);
+  const fires = rows.filter(Boolean).map(r => Object.fromEntries(r.split(',').map((v, i) => [cols[i], v])) as Fire);
+  // The FIRMS query is a rectangle; for the statewide default, drop hotspots in NV, AZ, OR and Mexico.
+  return bbox === CA_BBOX ? fires.filter(f => inCalifornia(+f.latitude, +f.longitude)) : fires;
 }
 
 export async function fetchWeather(lat: number | string, lng: number | string) {

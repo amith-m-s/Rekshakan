@@ -55,13 +55,49 @@ export default function Dashboard() {
     loadFires();
     loadReports();
     loadAlerts();
-    const timers = [
-      setInterval(loadZones, 120_000),
-      setInterval(loadFires, 300_000),
-      setInterval(loadReports, 10_000),
-    ];
+    const timers = [setInterval(loadZones, 120_000), setInterval(loadFires, 300_000)];
     return () => timers.forEach(clearInterval);
   }, [loadZones, loadReports, loadAlerts]);
+
+  // Push updates from Supabase realtime. Falls back to polling when it isn't configured or connected.
+  const [realtime, setRealtime] = useState(false);
+  useEffect(() => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !key) return;
+
+    let cancelled = false;
+    let cleanup = () => {};
+    import('@supabase/supabase-js').then(({ createClient }) => {
+      if (cancelled) return;
+      const sb = createClient(url, key, { auth: { persistSession: false } });
+      const channel = sb
+        .channel('dashboard')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reports' }, p => {
+          const report = p.new as Report;
+          setReports(rs => [report, ...rs.filter(r => r.id !== report.id)]);
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'alerts' }, p => {
+          const alert = p.new as AlertRecord;
+          setAlerts(as => [alert, ...as.filter(a => a.id !== alert.id)]);
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'zones' }, () => loadZones())
+        .subscribe(status => setRealtime(status === 'SUBSCRIBED'));
+      cleanup = () => {
+        sb.removeChannel(channel);
+      };
+    });
+    return () => {
+      cancelled = true;
+      cleanup();
+    };
+  }, [loadZones]);
+
+  useEffect(() => {
+    if (realtime) return;
+    const timer = setInterval(loadReports, 10_000);
+    return () => clearInterval(timer);
+  }, [realtime, loadReports]);
 
   const zones = useMemo(() => data?.zones ?? [], [data]);
   const selected = zones.find(z => z.id === selectedId) ?? null;
@@ -91,6 +127,11 @@ export default function Dashboard() {
                   ok={data.sources.demo === 'supabase'}
                   label={data.sources.demo === 'supabase' ? 'Supabase' : 'Seed data'}
                   title={data.sources.demo === 'seed' ? 'Supabase tables not found; run supabase/schema.sql' : undefined}
+                />
+                <Badge
+                  ok={realtime}
+                  label={realtime ? 'Realtime' : 'Polling'}
+                  title={realtime ? 'Reports and alerts arrive instantly' : 'Realtime not connected; refreshing reports every 10 s'}
                 />
               </div>
             )}
