@@ -10,7 +10,6 @@ services:
     healthCheckPath: /api/health
     autoDeployTrigger: commit
     numInstances: 1
-    maxShutdownDelaySeconds: 30
     envVars:
       - key: NODE_VERSION
         value: 24.14.1
