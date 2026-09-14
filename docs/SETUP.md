@@ -307,6 +307,148 @@ If something's wrong, open **Vercel → rescuermap → Logs**. Server warnings f
 
 ---
 
+## Part 4B: Fixing "Seed data" / "Polling" on a Vercel deployment
+
+The header badges tell you what the deployed server can reach:
+
+| Badge | Meaning |
+| --- | --- |
+| **Cal OES live** | The state evacuation feed loaded. Needs nothing from you. |
+| **Supabase** / amber **Seed data** | Whether the server could read the `zones` table. **Seed data** = it couldn't, so it fell back to `lib/seed.ts`. |
+| **Realtime** / amber **Polling** | Whether the *browser* connected to Supabase realtime. **Polling** = it couldn't, so it refreshes every 10 s. |
+
+If you see **Seed data**, saves on that deployment only live in the memory of whichever Vercel server
+handled the request. Reports from the phone will appear and disappear at random. Fix this before
+building the phone app.
+
+### Step 1: Know which deployment you're looking at
+
+Vercel creates separate deployments, and **each environment has its own variables**:
+
+| URL looks like | Environment | Built from |
+| --- | --- | --- |
+| `rescuermap.vercel.app` (the project's main domain) | **Production** | `main` |
+| `rescuermap-git-feature-dashboard-supabase-<team>.vercel.app` or `rescuermap-<hash>-<team>.vercel.app` | **Preview** | a branch, e.g. `feature/dashboard-supabase` |
+
+Until the pull request is merged, `main` doesn't contain the dashboard, so the dashboard you're seeing is a
+**Preview** deployment. The Supabase integration commonly adds its variables to **Production only**,
+which gives exactly this symptom on previews.
+
+Find the URL in Vercel → project → **Deployments** → click the deployment → **Domains**.
+
+### Step 2: Open the health check on that exact URL
+
+```
+https://<the-deployment-url>/api/health
+```
+
+Sign in with any username and the `DASHBOARD_PASSWORD` (if set). Preview URLs may first ask you to log in to
+Vercel. You'll get JSON like this (only yes/no per variable, never values):
+
+```json
+{
+  "env": { "NEXT_PUBLIC_SUPABASE_URL": true, "NEXT_PUBLIC_SUPABASE_ANON_KEY": true, "SUPABASE_SERVICE_ROLE_KEY": true, "...": "..." },
+  "supabase": {
+    "projectHost": "cknzwibzpeakxrpvffmc.supabase.co",
+    "serverKey": "secret",
+    "browserRealtimeConfigured": true,
+    "tables": { "zones": "ok (5 rows)", "alerts": "ok (0 rows)", "reports": "ok (1 rows)", "report_rate": "ok (1 rows)" }
+  },
+  "hints": []
+}
+```
+
+That example is what a working setup looks like (it's the output from the local `.env.local`, whose schema is
+already set up in project `cknzwibzpeakxrpvffmc`).
+
+### Step 3: Match what you see to a fix
+
+Work through these in order; fix the first one that matches, redeploy (Step 4), and check again.
+
+**A. The Supabase variables show `false` (or `projectHost` is `null`)**
+The variables aren't set for this environment.
+
+1. Vercel → project → **Settings → Environment Variables**.
+2. Find `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY`. Look at
+   the environments listed next to each.
+3. If they only say **Production**: click **⋯ → Edit**, tick **Preview** (and **Development**), **Save**.
+   - If the integration manages them and they can't be edited, **Add New** variables with the same names,
+     scoped to **Preview**, with values copied from Supabase → **Project Settings → API Keys** (and the
+     Project URL). Use the same project as in B.
+4. While you're here, make sure `FIRMS_MAP_KEY`, `GROQ_API_KEY`, `NEXT_PUBLIC_CARTO_KEY` and
+   `DASHBOARD_PASSWORD` are also ticked for Preview.
+
+**B. `projectHost` is not the project that has your tables**
+The integration connected a different Supabase project from the one in `.env.local`
+(`cknzwibzpeakxrpvffmc.supabase.co`). Pick **one** project for everything:
+
+- **Option 1 (simplest): use the project Vercel is connected to.**
+  1. Open that project in Supabase (the host starts with its project ref).
+  2. Run `supabase/schema.sql` in its **SQL Editor** (Part 2.2) and do the checks in Part 2.3.
+  3. Update `.env.local` to that project's URL and keys so local and deployed match.
+- **Option 2: point Vercel at `cknzwibzpeakxrpvffmc`.**
+  1. Vercel → project → **Settings → Integrations** (or the Supabase integration's **Manage** page) → change
+     the connected Supabase project, **or** remove the integration.
+  2. If you removed it, add the three Supabase variables by hand (values from the
+     `cknzwibzpeakxrpvffmc` project's **API Keys** page) for Production **and** Preview.
+
+**C. A table shows `error: Could not find the table 'public.zones' in the schema cache`**
+The schema hasn't been run in the connected project. Run `supabase/schema.sql` there. If you *just* ran it
+and still see this, run this in the SQL Editor to refresh the API's cache, then retry:
+
+```sql
+notify pgrst, 'reload schema';
+```
+
+**D. A table shows `error: Invalid API key` (or a JWT error)**
+The key belongs to another project, was rotated, or is a legacy key that has been disabled. Copy the keys
+again from **that** project's **Project Settings → API Keys** into Vercel, then redeploy.
+
+**E. `serverKey` says `public (writes will fail)`**
+`SUPABASE_SERVICE_ROLE_KEY` is missing for this environment. Add it (Step 3A) and redeploy. Reads work
+without it, but status changes, alerts and phone reports won't be saved.
+
+**F. Tables are `ok` but the badge still says Polling**
+- If `browserRealtimeConfigured` is **false**: the `NEXT_PUBLIC_SUPABASE_*` variables weren't set when the
+  app was **built**. They're copied into the browser code at build time, so after adding them you must
+  redeploy (Step 4). The server-side check can be `ok` while the browser still has no keys.
+- If it's **true**: realtime isn't enabled for the tables. In Supabase → **Database → Publications →
+  supabase_realtime**, make sure `zones`, `alerts` and `reports` are toggled on (rerunning
+  `supabase/schema.sql` does this).
+- Hard-refresh the dashboard (Ctrl+Shift+R).
+
+### Step 4: Redeploy without the build cache
+
+Environment variable changes only apply to **new** builds.
+
+1. Vercel → project → **Deployments** → the latest deployment for your branch → **⋯ → Redeploy**.
+2. **Untick "Use existing Build Cache"** so the `NEXT_PUBLIC_*` values are rebuilt into the browser code.
+3. Wait for **Ready**, then reopen `/api/health` and the dashboard.
+
+### Step 5: Prove it end to end
+
+In PowerShell (replace the URL; `/api/reports` needs no password):
+
+```powershell
+$u = "https://<the-deployment-url>"
+Invoke-RestMethod "$u/api/reports" -Method Post -ContentType application/json `
+  -Body '{"kind":"fire","message":"Vercel check","lat":39.043,"lng":-122.915,"reporter":"setup"}'
+```
+
+- The dashboard (open in a browser, badges **Supabase** + **Realtime**) shows the report within a second.
+- Supabase → **Table Editor → reports** has the row.
+
+Preview URLs are behind Vercel Authentication, so this POST may return a Vercel login page on a preview.
+Test the POST on **production** after the pull request is merged, or temporarily turn off protection for
+previews (Settings → **Deployment Protection**).
+
+### Step 6: Repeat on production after merging
+
+When the pull request is merged into `main`, production deploys. Run Steps 2–5 against the production URL.
+The production URL is the one the phone app uses (see [MOBILE.md](MOBILE.md)).
+
+---
+
 ## Part 5: Final checklist
 
 - [ ] Old Groq key deleted in the Groq console; `test-groq.mjs` removed
