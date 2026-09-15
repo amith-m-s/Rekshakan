@@ -11,6 +11,8 @@ const state = {
   reports: [],
   responders: [],
   responderProfile: null,
+  intelligence: { zones: [], fires: [], sources: {} },
+  focusRequestId: null,
   map: null,
   socket: null,
 };
@@ -114,6 +116,7 @@ function connectSocket() {
     $("#socketState").lastChild.textContent = " Disconnected";
   });
   [
+    "incident.created",
     "help_request.created",
     "assignment.created",
     "assignment.status_changed",
@@ -126,8 +129,15 @@ function connectSocket() {
     "shelter.status_changed",
     "escalation.created",
   ].forEach((event) =>
-    socket.on(event, () => {
+    socket.on(event, (payload = {}) => {
       addActivity(event);
+      if (event === "help_request.created") {
+        state.incidentId = payload.incident_id || state.incidentId;
+        state.focusRequestId = payload.id;
+        toast(
+          `New ${pretty(payload.category || "help")} request · ${payload.people_count || 1} ${payload.people_count === 1 ? "person" : "people"}`,
+        );
+      }
       refreshAll(false);
     }),
   );
@@ -172,16 +182,30 @@ async function refreshAll(showToast = false) {
   }
 }
 async function loadOperationalData() {
-  if (!state.incidentId) return;
-  const query = "?incidentId=" + encodeURIComponent(state.incidentId);
-  const tasks = [
-    api("/shelters" + query).then((x) => (state.shelters = x)),
-    api("/reports" + query).then((x) => (state.reports = x)),
-  ];
-  if (["COORDINATOR", "ADMIN"].includes(state.user.role))
+  const privileged = ["COORDINATOR", "ADMIN"].includes(state.user.role);
+  const tasks = [];
+  if (privileged) {
     tasks.push(api("/responders").then((x) => (state.responders = x)));
+    tasks.push(
+      api("/intelligence")
+        .then((x) => (state.intelligence = x))
+        .catch(() => {
+          state.intelligence = { zones: [], fires: [], sources: {} };
+        }),
+    );
+  }
   if (state.user.role === "RESPONDER")
     tasks.push(api("/responders/me").then((x) => (state.responderProfile = x)));
+  if (state.incidentId) {
+    const query = "?incidentId=" + encodeURIComponent(state.incidentId);
+    tasks.push(
+      api("/shelters" + query).then((x) => (state.shelters = x)),
+      api("/reports" + query).then((x) => (state.reports = x)),
+    );
+  } else {
+    state.shelters = [];
+    state.reports = [];
+  }
   await Promise.all(tasks);
 }
 function renderRoleHome() {
@@ -387,7 +411,6 @@ async function toggleAvailability() {
 }
 function renderOperationalMap() {
   const incident = state.incidents.find((x) => x.id === state.incidentId);
-  if (!incident) return;
   const points = [
     ...state.requests.map((x) => ({ ...x, kind: "help", label: x.category })),
     ...state.responders
@@ -398,31 +421,8 @@ function renderOperationalMap() {
       .filter((x) => x.latitude && x.longitude)
       .map((x) => ({ ...x, kind: "report", label: pretty(x.category) })),
   ];
-  const scale = Math.max(0.008, incident.radius_km / 75);
-  const position = (p) => ({
-    x: Math.max(
-      25,
-      Math.min(675, 350 + (p.longitude - incident.longitude) * (300 / scale)),
-    ),
-    y: Math.max(
-      25,
-      Math.min(355, 190 - (p.latitude - incident.latitude) * (155 / scale)),
-    ),
-  });
-  const markers = points
-    .map((p) => {
-      const q = position(p);
-      const shape =
-        p.kind === "shelter"
-          ? `<rect x="${q.x - 7}" y="${q.y - 7}" width="14" height="14" rx="3"/>`
-          : p.kind === "report"
-            ? `<path d="M${q.x - 7} ${q.y + 6}L${q.x} ${q.y - 7}L${q.x + 7} ${q.y + 6}Z"/>`
-            : `<circle cx="${q.x}" cy="${q.y}" r="7"/>`;
-      return `<g class="map-marker ${p.kind}"><title>${escapeHtml(p.label || p.kind)}</title>${shape}<text x="${q.x + 11}" y="${q.y + 4}">${escapeHtml(p.label || pretty(p.kind))}</text></g>`;
-    })
-    .join("");
   $("#operationalMap").innerHTML =
-    `<div id="leafletMap" class="leaflet-map" aria-label="Interactive operational map"></div><div id="offlineMap" class="offline-map"><svg viewBox="0 0 700 380" role="img" aria-label="Offline operational map"><defs><pattern id="mapGrid" width="35" height="35" patternUnits="userSpaceOnUse"><path d="M35 0H0V35" fill="none" stroke="#cbd9d1" stroke-width="1"/></pattern><linearGradient id="terrain" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#edf4ef"/><stop offset="1" stop-color="#e2ebe5"/></linearGradient></defs><rect width="700" height="380" rx="14" fill="url(#terrain)"/><path d="M60 35L180 18l90 65 105-30 103 75 142-45 80 35V0H0v100Z" fill="#dce9df" opacity=".8"/><path d="M0 310l95-65 94 25 80-54 85 45 112-28 110 50 124-44v141H0Z" fill="#e7eee9"/><rect width="700" height="380" rx="14" fill="url(#mapGrid)" opacity=".55"/><path d="M30 260 C130 210 170 315 280 250 S430 175 520 230 S620 230 690 150" fill="none" stroke="#b9d5e7" stroke-width="14" opacity=".75"/><path d="M0 125 C120 95 190 170 300 135 S510 80 700 105" fill="none" stroke="#fff" stroke-width="5" opacity=".9"/><circle class="alert-radius" cx="350" cy="190" r="125"/><circle class="fire-radius" cx="350" cy="190" r="${35 + incident.severity_score / 3}"/><text class="fire-label" x="350" y="194">${incident.severity_score}</text>${markers}<g class="map-scale"><rect x="20" y="341" width="138" height="23" rx="7"/><text x="31" y="356">● LIVE · ${points.length} FIELD SIGNALS</text></g></svg></div>`;
+    `<div id="leafletMap" class="leaflet-map" aria-label="Interactive operational map"></div><div id="offlineMap" class="offline-map"><div class="map-empty-fallback"><span>⌖</span><h3>${incident ? escapeHtml(incident.name) : "Monitoring California"}</h3><p>${incident ? "Operational map is temporarily unavailable." : "No active operations. New resident requests will appear here automatically."}</p></div></div>`;
   renderLeafletMap(incident, points);
 }
 function renderLeafletMap(incident, points) {
@@ -432,9 +432,12 @@ function renderLeafletMap(incident, points) {
   }
   try {
     if (state.map) state.map.remove();
+    const center = incident
+      ? [incident.latitude, incident.longitude]
+      : [37.15, -119.7];
     const map = window.L.map("leafletMap", { zoomControl: false }).setView(
-      [incident.latitude, incident.longitude],
-      13,
+      center,
+      incident ? 13 : 6,
     );
     state.map = map;
     window.L.control.zoom({ position: "bottomright" }).addTo(map);
@@ -442,30 +445,31 @@ function renderLeafletMap(incident, points) {
       maxZoom: 19,
       attribution: "© OpenStreetMap contributors",
     }).addTo(map);
-    const alertLayer = window.L.circle(
-      [incident.latitude, incident.longitude],
-      {
+    if (incident) {
+      window.L.circle([incident.latitude, incident.longitude], {
         radius: incident.radius_km * 1600,
         color: "#e59b35",
         weight: 2,
         dashArray: "8 7",
         fillColor: "#f1b557",
         fillOpacity: 0.08,
-      },
-    ).bindPopup(
-      `<b>Alert radius</b><br>${incident.radius_km} km operational zone`,
-    );
-    const fireLayer = window.L.circle([incident.latitude, incident.longitude], {
-      radius: incident.radius_km * 1000,
-      color: "#c9322c",
-      weight: 3,
-      fillColor: "#e94a40",
-      fillOpacity: 0.28,
-    }).bindPopup(
-      `<b>${escapeHtml(incident.name)}</b><br>${incident.severity_level} · ${incident.severity_score}/100`,
-    );
-    alertLayer.addTo(map);
-    fireLayer.addTo(map);
+      })
+        .bindPopup(
+          `<b>Alert radius</b><br>${incident.radius_km} km operational zone`,
+        )
+        .addTo(map);
+      window.L.circle([incident.latitude, incident.longitude], {
+        radius: incident.radius_km * 1000,
+        color: "#c9322c",
+        weight: 3,
+        fillColor: "#e94a40",
+        fillOpacity: 0.28,
+      })
+        .bindPopup(
+          `<b>${escapeHtml(incident.name)}</b><br>${incident.severity_level} · ${incident.severity_score}/100`,
+        )
+        .addTo(map);
+    }
     const groups = {
       Help: window.L.layerGroup().addTo(map),
       Responders: window.L.layerGroup().addTo(map),
@@ -511,18 +515,85 @@ function renderLeafletMap(incident, points) {
         maxZoom: 17,
         gradient: { 0.2: "#ffd54a", 0.55: "#f58232", 1: "#d51f32" },
       }).addTo(map);
+    const zoneColors = {
+      normal: "#22c86a",
+      advisory: "#f0ba20",
+      warning: "#f47b20",
+      order: "#ef3333",
+      shelter: "#914bea",
+      repopulation: "#3478df",
+    };
+    const zones = state.intelligence.zones || [];
+    if (zones.length) {
+      groups["Evacuation zones"] = window.L.layerGroup().addTo(map);
+      zones.forEach((zone) => {
+        if (!zone.geom) return;
+        window.L.geoJSON(zone.geom, {
+          style: {
+            color:
+              zoneColors[String(zone.status || "normal").toLowerCase()] ||
+              "#f47b20",
+            weight: 2,
+            fillOpacity: 0.16,
+          },
+        })
+          .bindTooltip(escapeHtml(zone.name || zone.id || "Evacuation zone"))
+          .addTo(groups["Evacuation zones"]);
+      });
+    }
+    const fires = (state.intelligence.fires || []).filter(
+      (fire) =>
+        Number.isFinite(Number(fire.latitude)) &&
+        Number.isFinite(Number(fire.longitude)),
+    );
+    if (fires.length) {
+      groups["FIRMS hotspots"] = window.L.layerGroup();
+      fires.forEach((fire) =>
+        window.L.circleMarker([Number(fire.latitude), Number(fire.longitude)], {
+          radius: 4,
+          color: "#ff9e24",
+          weight: 1,
+          fillColor: "#ff4b1f",
+          fillOpacity: 0.8,
+        })
+          .bindPopup(
+            `<b>Satellite hotspot</b><br>FRP ${escapeHtml(String(fire.frp ?? "—"))}`,
+          )
+          .addTo(groups["FIRMS hotspots"]),
+      );
+      if (window.L.heatLayer)
+        groups["FIRMS fire heat"] = window.L.heatLayer(
+          fires.map((fire) => [
+            Number(fire.latitude),
+            Number(fire.longitude),
+            Math.min(1, Math.max(0.25, Math.sqrt(Number(fire.frp) || 1) / 8)),
+          ]),
+          {
+            radius: 24,
+            blur: 18,
+            gradient: { 0.2: "#ffe65a", 0.55: "#ff8b21", 1: "#e52920" },
+          },
+        ).addTo(map);
+    }
     window.L.control
       .layers(null, groups, { collapsed: true, position: "topright" })
       .addTo(map);
-    const bounds = window.L.latLngBounds([
-      [incident.latitude, incident.longitude],
-    ]);
+    const bounds = window.L.latLngBounds(
+      incident ? [[incident.latitude, incident.longitude]] : [],
+    );
     points.forEach((p) => bounds.extend([p.latitude, p.longitude]));
-    if (points.length) map.fitBounds(bounds.pad(0.28), { maxZoom: 14 });
+    if (incident || points.length)
+      map.fitBounds(bounds.pad(0.28), { maxZoom: 14 });
+    const focused = points.find((point) => point.id === state.focusRequestId);
+    if (focused) {
+      map.flyTo([focused.latitude, focused.longitude], 15);
+      state.focusRequestId = null;
+    }
     $("#offlineMap").classList.add("hidden");
     $("#leafletMap").classList.add("ready");
-    $("#mapMode").textContent =
-      `Interactive OpenStreetMap · ${points.length} live field signals`;
+    $("#mapMode").textContent = incident
+      ? `Interactive OpenStreetMap · ${points.length} live field signals · ${fires.length} FIRMS hotspots`
+      : `Monitoring California · waiting for resident requests · ${fires.length} FIRMS hotspots`;
     setTimeout(() => map.invalidateSize(), 50);
   } catch (error) {
     state.map = null;
@@ -541,7 +612,14 @@ function mapPopupDetail(point) {
 }
 function renderSeverityFactors() {
   const incident = state.incidents.find((x) => x.id === state.incidentId);
-  if (!incident) return;
+  if (!incident) {
+    $("#severityBadge").textContent = "MONITORING";
+    $("#severityBadge").className = "status neutral";
+    $("#severityFactors").innerHTML =
+      '<p class="muted">Severity factors will appear when the first help request creates an incident.</p>';
+    $("#severityReasons").innerHTML = "";
+    return;
+  }
   const factors = Object.entries(incident.severity_factors || {});
   $("#severityBadge").textContent =
     `${incident.severity_level} · ${incident.severity_score}`;

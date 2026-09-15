@@ -49,11 +49,73 @@ export function notify(
 }
 
 export function createHelpRequest(userId: string, body: any) {
-  const incident = db()
-    .prepare("SELECT * FROM incidents WHERE id=?")
-    .get(body.incidentId) as any;
+  if (body.clientRequestId) {
+    const existing = db()
+      .prepare(
+        "SELECT * FROM help_requests WHERE resident_id=? AND client_request_id=?",
+      )
+      .get(userId, body.clientRequestId);
+    if (existing) return existing;
+  }
+  let incident = body.incidentId
+    ? (db()
+        .prepare("SELECT * FROM incidents WHERE id=?")
+        .get(body.incidentId) as any)
+    : null;
+  if (!incident && !body.incidentId) {
+    const active = db()
+      .prepare(
+        "SELECT * FROM incidents WHERE status IN ('DETECTED','ACTIVE') ORDER BY updated_at DESC",
+      )
+      .all() as any[];
+    incident =
+      active.find((candidate) => haversineKm(body, candidate) <= 50) ?? null;
+  }
+  if (!incident && !body.incidentId) {
+    const timestamp = now();
+    incident = {
+      id: id("inc"),
+      disaster_type:
+        body.category === "MEDICAL"
+          ? "MEDICAL_EMERGENCY"
+          : "COMMUNITY_EMERGENCY",
+      name: `${String(body.category).replaceAll("_", " ")} request`,
+      description:
+        "Created automatically from a verified resident assistance request",
+      latitude: body.latitude,
+      longitude: body.longitude,
+      radius_km: 2,
+      boundary_json: null,
+      spread_direction: null,
+      spread_speed: 0,
+      start_time: timestamp,
+      status: "ACTIVE",
+      severity_score: 0,
+      severity_level: "LOW",
+      severity_factors: "{}",
+      severity_reasons: "[]",
+      source_type: "COMMUNITY",
+      created_at: timestamp,
+      updated_at: timestamp,
+    };
+    db()
+      .prepare(
+        `INSERT INTO incidents(id,disaster_type,name,description,latitude,longitude,radius_km,boundary_json,spread_direction,spread_speed,start_time,status,severity_score,severity_level,severity_factors,severity_reasons,source_type,created_at,updated_at)
+       VALUES(@id,@disaster_type,@name,@description,@latitude,@longitude,@radius_km,@boundary_json,@spread_direction,@spread_speed,@start_time,@status,@severity_score,@severity_level,@severity_factors,@severity_reasons,@source_type,@created_at,@updated_at)`,
+      )
+      .run(incident);
+    audit("INCIDENT_CREATED_FROM_HELP_REQUEST", {
+      incidentId: incident.id,
+      actorId: userId,
+      newState: "ACTIVE",
+      latitude: body.latitude,
+      longitude: body.longitude,
+    });
+    emitOperational("incident.created", incident, [userId]);
+  }
   if (!incident)
     throw Object.assign(new Error("Incident not found"), { status: 404 });
+  body.incidentId = incident.id;
   const available = (
     db()
       .prepare(

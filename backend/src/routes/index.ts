@@ -36,7 +36,7 @@ const locationSchema = z.object({
 });
 const helpSchema = z.object({
   clientRequestId: z.string().max(100).optional(),
-  incidentId: z.string(),
+  incidentId: z.string().optional(),
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
   category: z.enum([
@@ -108,6 +108,35 @@ r.post(
       },
       201,
     );
+  }),
+);
+
+r.get(
+  "/intelligence",
+  auth,
+  roles("COORDINATOR", "ADMIN"),
+  asyncRoute(async (_req: any, res: any) => {
+    const fetchJson = async (path: string) => {
+      const response = await fetch(`${config.intelligenceUrl}${path}`, {
+        signal: AbortSignal.timeout(Math.max(config.providerTimeoutMs, 12_000)),
+      });
+      if (!response.ok)
+        throw new Error(`Intelligence service returned ${response.status}`);
+      return response.json();
+    };
+    const [zones, fires] = await Promise.allSettled([
+      fetchJson("/api/zones"),
+      fetchJson("/api/fires"),
+    ]);
+    ok(res, {
+      zones:
+        zones.status === "fulfilled" ? ((zones.value as any).zones ?? []) : [],
+      fires: fires.status === "fulfilled" ? fires.value : [],
+      sources: {
+        zones: zones.status === "fulfilled" ? "live" : "unavailable",
+        fires: fires.status === "fulfilled" ? "live" : "unavailable",
+      },
+    });
   }),
 );
 r.post(

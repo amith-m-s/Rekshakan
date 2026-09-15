@@ -47,6 +47,7 @@ const operations = [
   ["get", "/audit/timeline/{requestId}"],
   ["get", "/analytics/incidents/{id}"],
   ["get", "/admin/dashboard"],
+  ["get", "/intelligence"],
   ["get", "/providers/status"],
   ["get", "/providers/geocode"],
   ["get", "/providers/roads"],

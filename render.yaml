@@ -28,6 +28,8 @@ services:
         value: mock
       - key: PROVIDER_TIMEOUT_MS
         value: "5000"
+      - key: INTELLIGENCE_URL
+        value: https://rescuermap-dashboard-rset.onrender.com
       - key: CORS_ORIGINS
         value: https://rescuermap-dashboard-rset.onrender.com
 

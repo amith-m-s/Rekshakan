@@ -266,6 +266,30 @@ describe("API rescue workflow", () => {
       ).status,
     ).toBe("ASSIGNED");
   });
+  it("creates an incident when a resident requests help without one", async () => {
+    const created = await request(app)
+      .post("/api/help-requests")
+      .set("Authorization", `Bearer ${resident2}`)
+      .send({
+        clientRequestId: "test-incidentless-request",
+        latitude: 40.2,
+        longitude: -124.1,
+        category: "EVACUATION",
+        description: "Road access is blocked",
+        peopleCount: 2,
+        medicalEmergency: false,
+        vulnerabilities: [],
+        immediateDanger: true,
+      });
+    expect(created.status).toBe(201);
+    expect(created.body.data.incident_id).toBeTypeOf("string");
+    const incident = await request(app)
+      .get(`/api/incidents/${created.body.data.incident_id}`)
+      .set("Authorization", `Bearer ${coordinator}`);
+    expect(incident.status).toBe(200);
+    expect(incident.body.data.source_type).toBe("COMMUNITY");
+    expect(incident.body.data.latitude).toBe(40.2);
+  });
   it("drives the provider-backed simulator", async () => {
     const started = await request(app)
       .post("/api/simulator/start")

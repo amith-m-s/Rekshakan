@@ -353,6 +353,29 @@ header h2,
 .offline-map {
   width: 100%;
 }
+.map-empty-fallback {
+  min-height: 430px;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  padding: 32px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: radial-gradient(circle at center, #f9fcfa, #e7f0ea);
+  color: var(--muted);
+}
+.map-empty-fallback span {
+  color: var(--green);
+  font-size: 42px;
+}
+.map-empty-fallback h3 {
+  color: var(--ink);
+  margin: 8px 0;
+}
+.map-empty-fallback p {
+  margin: 0;
+  max-width: 420px;
+}
 .map-mode {
   margin: 10px 2px 0;
   color: var(--muted);

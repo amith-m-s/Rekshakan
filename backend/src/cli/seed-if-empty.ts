@@ -1,5 +1,5 @@
 import { closeDb, db } from "../db/index.js";
-import { seed } from "../seed/index.js";
+import { seedAccountsOnly } from "../seed/index.js";
 import { DEMO_GEOGRAPHY } from "../config/geography.js";
 
 function alignLegacyDemoGeography() {
@@ -61,8 +61,8 @@ async function main() {
     count: number;
   };
   if (users.count === 0) {
-    await seed();
-    console.log("Seeded initial RescuerMap demonstration data");
+    await seedAccountsOnly();
+    console.log("Seeded RescuerMap demo accounts; operations start empty");
   } else {
     console.log(`Database already initialized with ${users.count} users`);
   }

@@ -18,6 +18,9 @@ export const config = {
   ).split(","),
   providerMode: process.env.PROVIDER_MODE === "real" ? "real" : "mock",
   providerTimeoutMs: num(process.env.PROVIDER_TIMEOUT_MS, 5000),
+  intelligenceUrl:
+    process.env.INTELLIGENCE_URL ||
+    "https://rescuermap-dashboard-rset.onrender.com",
   severityWeights: {
     threat: 0.18,
     population: 0.12,

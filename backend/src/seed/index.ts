@@ -7,6 +7,59 @@ import {
 } from "../services/operations.js";
 import { id, now } from "../utils/core.js";
 import { DEMO_GEOGRAPHY } from "../config/geography.js";
+
+const demoUsers = [
+  ["usr_admin", "admin@rescuermap.local", "Demo Admin", "ADMIN"],
+  [
+    "usr_coord",
+    "coordinator@rescuermap.local",
+    "Maya Coordinator",
+    "COORDINATOR",
+  ],
+  ["usr_resident", "resident@rescuermap.local", "Ravi Resident", "RESIDENT"],
+  ["usr_resident2", "resident2@rescuermap.local", "Asha Resident", "RESIDENT"],
+  ["usr_responder", "responder@rescuermap.local", "Sam Responder", "RESPONDER"],
+  [
+    "usr_responder2",
+    "responder2@rescuermap.local",
+    "Leena Responder",
+    "RESPONDER",
+  ],
+] as const;
+
+export async function seedAccountsOnly() {
+  const database = db();
+  const timestamp = now();
+  const passwordHash = await bcrypt.hash("Demo123!", 10);
+  for (const [userId, email, name, role] of demoUsers) {
+    database
+      .prepare(
+        "INSERT OR IGNORE INTO users(id,email,password_hash,name,role,status,verification_status,created_at,updated_at) VALUES(?,?,?, ?,?,'ACTIVE','VERIFIED',?,?)",
+      )
+      .run(userId, email, passwordHash, name, role, timestamp, timestamp);
+  }
+  for (const [responderId, userId] of [
+    ["rsp_demo", "usr_responder"],
+    ["rsp_demo2", "usr_responder2"],
+  ]) {
+    database
+      .prepare(
+        "INSERT OR IGNORE INTO responders(id,user_id,verification_status,skills,capabilities,vehicle_available,passenger_capacity,availability,status,updated_at) VALUES(?,?,'VERIFIED',?,?,1,4,0,'OFFLINE',?)",
+      )
+      .run(
+        responderId,
+        userId,
+        JSON.stringify(["First aid", "Evacuation"]),
+        JSON.stringify([
+          "MEDICAL_FIRST_AID",
+          "EVACUATION_ASSISTANCE",
+          "TRANSPORT",
+        ]),
+        timestamp,
+      );
+  }
+  return { users: demoUsers.length };
+}
 export async function seed() {
   const d = db(),
     t = now();
@@ -14,34 +67,7 @@ export async function seed() {
     "DELETE FROM simulator_state; DELETE FROM safe_checkins; DELETE FROM shelter_checkins; DELETE FROM incident_data; DELETE FROM fraud_cases; DELETE FROM audit_logs; DELETE FROM escalations; DELETE FROM notifications; DELETE FROM community_reports; DELETE FROM assignments; DELETE FROM help_requests; DELETE FROM shelters; DELETE FROM locations; DELETE FROM responders; DELETE FROM incidents; DELETE FROM users;",
   );
   const password_hash = await bcrypt.hash("Demo123!", 10);
-  const users = [
-    ["usr_admin", "admin@rescuermap.local", "Demo Admin", "ADMIN"],
-    [
-      "usr_coord",
-      "coordinator@rescuermap.local",
-      "Maya Coordinator",
-      "COORDINATOR",
-    ],
-    ["usr_resident", "resident@rescuermap.local", "Ravi Resident", "RESIDENT"],
-    [
-      "usr_resident2",
-      "resident2@rescuermap.local",
-      "Asha Resident",
-      "RESIDENT",
-    ],
-    [
-      "usr_responder",
-      "responder@rescuermap.local",
-      "Sam Responder",
-      "RESPONDER",
-    ],
-    [
-      "usr_responder2",
-      "responder2@rescuermap.local",
-      "Leena Responder",
-      "RESPONDER",
-    ],
-  ];
+  const users = demoUsers;
   for (const [uid, email, name, role] of users)
     d.prepare(
       "INSERT INTO users(id,email,password_hash,name,role,status,verification_status,created_at,updated_at) VALUES(?,?,?, ?,?,'ACTIVE','VERIFIED',?,?)",
