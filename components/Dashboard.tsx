@@ -62,12 +62,12 @@ export default function Dashboard() {
   }, [loadZones, loadReports, loadAlerts]);
 
   useEffect(() => {
-    fetch(`${RESCUE_API}/api/health`)
+    fetch('/api/rescue-health')
       .then(res => {
         if (!res.ok) throw new Error('Rescue API unavailable');
         return res.json();
       })
-      .then(body => setRescueOnline(body?.data?.service === 'up' && body?.data?.database === 'up'))
+      .then(body => setRescueOnline(body?.online === true))
       .catch(() => setRescueOnline(false));
   }, []);
 
