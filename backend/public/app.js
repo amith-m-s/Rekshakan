@@ -421,6 +421,12 @@ function renderOperationalMap() {
       .filter((x) => x.latitude && x.longitude)
       .map((x) => ({ ...x, kind: "report", label: pretty(x.category) })),
   ];
+  // Tear Leaflet down while its original container is still attached. Replacing
+  // the container first leaves Leaflet holding a detached DOM node on refresh.
+  if (state.map) {
+    state.map.remove();
+    state.map = null;
+  }
   $("#operationalMap").innerHTML =
     `<div id="leafletMap" class="leaflet-map" aria-label="Interactive operational map"></div><div id="offlineMap" class="offline-map"><div class="map-empty-fallback"><span>⌖</span><h3>${incident ? escapeHtml(incident.name) : "Monitoring California"}</h3><p>${incident ? "Operational map is temporarily unavailable." : "No active operations. New resident requests will appear here automatically."}</p></div></div>`;
   renderLeafletMap(incident, points);
@@ -431,7 +437,6 @@ function renderLeafletMap(incident, points) {
     return;
   }
   try {
-    if (state.map) state.map.remove();
     const center = incident
       ? [incident.latitude, incident.longitude]
       : [37.15, -119.7];
@@ -523,7 +528,9 @@ function renderLeafletMap(incident, points) {
       shelter: "#914bea",
       repopulation: "#3478df",
     };
-    const zones = state.intelligence.zones || [];
+    const zones = Array.isArray(state.intelligence.zones)
+      ? state.intelligence.zones
+      : [];
     if (zones.length) {
       groups["Evacuation zones"] = window.L.layerGroup().addTo(map);
       zones.forEach((zone) => {
@@ -541,7 +548,9 @@ function renderLeafletMap(incident, points) {
           .addTo(groups["Evacuation zones"]);
       });
     }
-    const fires = (state.intelligence.fires || []).filter(
+    const fires = (
+      Array.isArray(state.intelligence.fires) ? state.intelligence.fires : []
+    ).filter(
       (fire) =>
         Number.isFinite(Number(fire.latitude)) &&
         Number.isFinite(Number(fire.longitude)),
@@ -596,9 +605,10 @@ function renderLeafletMap(incident, points) {
       : `Monitoring California · waiting for resident requests · ${fires.length} FIRMS hotspots`;
     setTimeout(() => map.invalidateSize(), 50);
   } catch (error) {
+    console.error("Operational map initialization failed", error);
     state.map = null;
     $("#mapMode").textContent =
-      "Offline map · interactive map could not initialize";
+      `Offline map · ${error?.message || "interactive map could not initialize"}`;
   }
 }
 function mapPopupDetail(point) {
