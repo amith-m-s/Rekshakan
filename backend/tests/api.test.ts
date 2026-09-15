@@ -289,6 +289,27 @@ describe("API rescue workflow", () => {
     expect(incident.status).toBe(200);
     expect(incident.body.data.source_type).toBe("COMMUNITY");
     expect(incident.body.data.latitude).toBe(40.2);
+    expect(incident.body.data.radius_km).toBe(3);
+    const second = await request(app)
+      .post("/api/help-requests")
+      .set("Authorization", `Bearer ${resident}`)
+      .send({
+        clientRequestId: "test-nearby-request",
+        latitude: 40.201,
+        longitude: -124.101,
+        category: "MEDICAL",
+        peopleCount: 1,
+        medicalEmergency: true,
+        vulnerabilities: [],
+        immediateDanger: true,
+      });
+    expect(second.body.data.incident_id).toBe(created.body.data.incident_id);
+    const updated = await request(app)
+      .get(`/api/incidents/${created.body.data.incident_id}`)
+      .set("Authorization", `Bearer ${coordinator}`);
+    expect(updated.body.data.severity_score).toBeGreaterThan(
+      incident.body.data.severity_score,
+    );
   });
   it("drives the provider-backed simulator", async () => {
     const started = await request(app)

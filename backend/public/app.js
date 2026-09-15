@@ -506,6 +506,11 @@ function renderLeafletMap(incident, points) {
       marker.bindPopup(
         `<b>${escapeHtml(point.label || pretty(point.kind))}</b><br>${mapPopupDetail(point)}`,
       );
+      if (point.kind === "help")
+        marker.bindTooltip(
+          `${escapeHtml(pretty(point.category))} · ${point.people_count} ${point.people_count === 1 ? "person" : "people"}`,
+          { permanent: true, direction: "top", offset: [0, -8] },
+        );
       marker.addTo(groups[names[point.kind]]);
       if (point.kind === "help")
         heat.push([
@@ -521,7 +526,7 @@ function renderLeafletMap(incident, points) {
           blur: 30,
           maxZoom: 17,
           gradient: { 0.2: "#ffd54a", 0.55: "#f58232", 1: "#d51f32" },
-        }).addTo(map);
+        });
       } catch (error) {
         console.warn("Request heatmap unavailable", error);
       }
@@ -538,7 +543,7 @@ function renderLeafletMap(incident, points) {
       ? state.intelligence.zones
       : [];
     if (zones.length) {
-      groups["Evacuation zones"] = window.L.layerGroup().addTo(map);
+      groups["Evacuation zones"] = window.L.layerGroup();
       zones.forEach((zone) => {
         if (!zone.geom) return;
         try {
@@ -593,7 +598,7 @@ function renderLeafletMap(incident, points) {
               blur: 18,
               gradient: { 0.2: "#ffe65a", 0.55: "#ff8b21", 1: "#e52920" },
             },
-          ).addTo(map);
+          );
         } catch (error) {
           console.warn("FIRMS heatmap unavailable", error);
         }
@@ -637,7 +642,7 @@ function renderLeafletMap(incident, points) {
 }
 function mapPopupDetail(point) {
   if (point.kind === "help")
-    return `${pretty(point.priority_level)} priority · ${point.people_count} people · ${pretty(point.status)}`;
+    return `${pretty(point.priority_level)} priority · ${point.people_count} ${point.people_count === 1 ? "person" : "people"} · ${pretty(point.status)}${point.description ? `<br>${escapeHtml(point.description)}` : ""}`;
   if (point.kind === "responder")
     return `${point.availability ? "Available" : pretty(point.status)} · capacity ${point.passenger_capacity}`;
   if (point.kind === "shelter")

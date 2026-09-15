@@ -69,7 +69,7 @@ export function createHelpRequest(userId: string, body: any) {
       )
       .all() as any[];
     incident =
-      active.find((candidate) => haversineKm(body, candidate) <= 50) ?? null;
+      active.find((candidate) => haversineKm(body, candidate) <= 3) ?? null;
   }
   if (!incident && !body.incidentId) {
     const timestamp = now();
