@@ -9,6 +9,7 @@ import {
 } from "./operations.js";
 import { emitToRoles } from "./runtime.js";
 import { id, now } from "../utils/core.js";
+import { DEMO_GEOGRAPHY } from "../config/geography.js";
 
 export type SimulatorConfig = {
   latitude: number;
@@ -26,8 +27,8 @@ export type SimulatorConfig = {
   responders: number;
 };
 const defaults: SimulatorConfig = {
-  latitude: 12.9716,
-  longitude: 77.5946,
+  latitude: DEMO_GEOGRAPHY.simulator.latitude,
+  longitude: DEMO_GEOGRAPHY.simulator.longitude,
   initialRadius: 1.2,
   spreadSpeed: 2.4,
   spreadDirection: 65,

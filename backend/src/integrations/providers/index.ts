@@ -133,7 +133,7 @@ const mock = {
   alerts: async () => [] as unknown[],
   shelters: async () => [] as unknown[],
   roads: async () => [] as unknown[],
-  geocoding: async () => ({ latitude: 12.9716, longitude: 77.5946 }),
+  geocoding: async () => ({ latitude: 37.126, longitude: -122.12 }),
   ai: async () => ({
     summary: "Mock draft analysis; operational decisions remain rule-based.",
     draft: true,
