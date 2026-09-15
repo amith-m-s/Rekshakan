@@ -473,6 +473,7 @@ function renderLeafletMap(incident, points) {
         .bindPopup(
           `<b>${escapeHtml(incident.name)}</b><br>${incident.severity_level} · ${incident.severity_score}/100`,
         )
+        .bindTooltip(`${incident.radius_km} km operational radius`)
         .addTo(map);
     }
     const groups = {
@@ -513,13 +514,18 @@ function renderLeafletMap(incident, points) {
           Math.max(0.3, (point.priority_score || 50) / 100),
         ]);
     });
-    if (window.L.heatLayer && heat.length)
-      groups["Risk heatmap"] = window.L.heatLayer(heat, {
-        radius: 42,
-        blur: 30,
-        maxZoom: 17,
-        gradient: { 0.2: "#ffd54a", 0.55: "#f58232", 1: "#d51f32" },
-      }).addTo(map);
+    if (window.L.heatLayer && heat.length) {
+      try {
+        groups["Risk heatmap"] = window.L.heatLayer(heat, {
+          radius: 42,
+          blur: 30,
+          maxZoom: 17,
+          gradient: { 0.2: "#ffd54a", 0.55: "#f58232", 1: "#d51f32" },
+        }).addTo(map);
+      } catch (error) {
+        console.warn("Request heatmap unavailable", error);
+      }
+    }
     const zoneColors = {
       normal: "#22c86a",
       advisory: "#f0ba20",
@@ -535,17 +541,21 @@ function renderLeafletMap(incident, points) {
       groups["Evacuation zones"] = window.L.layerGroup().addTo(map);
       zones.forEach((zone) => {
         if (!zone.geom) return;
-        window.L.geoJSON(zone.geom, {
-          style: {
-            color:
-              zoneColors[String(zone.status || "normal").toLowerCase()] ||
-              "#f47b20",
-            weight: 2,
-            fillOpacity: 0.16,
-          },
-        })
-          .bindTooltip(escapeHtml(zone.name || zone.id || "Evacuation zone"))
-          .addTo(groups["Evacuation zones"]);
+        try {
+          window.L.geoJSON(zone.geom, {
+            style: {
+              color:
+                zoneColors[String(zone.status || "normal").toLowerCase()] ||
+                "#f47b20",
+              weight: 2,
+              fillOpacity: 0.16,
+            },
+          })
+            .bindTooltip(escapeHtml(zone.name || zone.id || "Evacuation zone"))
+            .addTo(groups["Evacuation zones"]);
+        } catch (error) {
+          console.warn("Skipped invalid evacuation zone", zone.id, error);
+        }
       });
     }
     const fires = (
@@ -570,19 +580,24 @@ function renderLeafletMap(incident, points) {
           )
           .addTo(groups["FIRMS hotspots"]),
       );
-      if (window.L.heatLayer)
-        groups["FIRMS fire heat"] = window.L.heatLayer(
-          fires.map((fire) => [
-            Number(fire.latitude),
-            Number(fire.longitude),
-            Math.min(1, Math.max(0.25, Math.sqrt(Number(fire.frp) || 1) / 8)),
-          ]),
-          {
-            radius: 24,
-            blur: 18,
-            gradient: { 0.2: "#ffe65a", 0.55: "#ff8b21", 1: "#e52920" },
-          },
-        ).addTo(map);
+      if (window.L.heatLayer) {
+        try {
+          groups["FIRMS fire heat"] = window.L.heatLayer(
+            fires.map((fire) => [
+              Number(fire.latitude),
+              Number(fire.longitude),
+              Math.min(1, Math.max(0.25, Math.sqrt(Number(fire.frp) || 1) / 8)),
+            ]),
+            {
+              radius: 24,
+              blur: 18,
+              gradient: { 0.2: "#ffe65a", 0.55: "#ff8b21", 1: "#e52920" },
+            },
+          ).addTo(map);
+        } catch (error) {
+          console.warn("FIRMS heatmap unavailable", error);
+        }
+      }
     }
     window.L.control
       .layers(null, groups, { collapsed: true, position: "topright" })
@@ -591,11 +606,20 @@ function renderLeafletMap(incident, points) {
       incident ? [[incident.latitude, incident.longitude]] : [],
     );
     points.forEach((p) => bounds.extend([p.latitude, p.longitude]));
-    if (incident || points.length)
-      map.fitBounds(bounds.pad(0.28), { maxZoom: 14 });
+    if (bounds.isValid()) {
+      try {
+        map.fitBounds(bounds.pad(0.28), { maxZoom: 14 });
+      } catch {
+        map.setView(center, incident ? 14 : 6);
+      }
+    }
     const focused = points.find((point) => point.id === state.focusRequestId);
     if (focused) {
-      map.flyTo([focused.latitude, focused.longitude], 15);
+      try {
+        map.flyTo([focused.latitude, focused.longitude], 15);
+      } catch {
+        map.setView([focused.latitude, focused.longitude], 15);
+      }
       state.focusRequestId = null;
     }
     $("#offlineMap").classList.add("hidden");

@@ -29,4 +29,8 @@ export const migrations = [
       UPDATE users SET operational_status='UNCONFIRMED';
     `,
   },
+  {
+    id: "004_community_incident_radius",
+    sql: "UPDATE incidents SET radius_km=3,updated_at=datetime('now') WHERE source_type='COMMUNITY' AND status IN ('DETECTED','ACTIVE');",
+  },
 ] as const;

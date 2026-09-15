@@ -84,7 +84,7 @@ export function createHelpRequest(userId: string, body: any) {
         "Created automatically from a verified resident assistance request",
       latitude: body.latitude,
       longitude: body.longitude,
-      radius_km: 2,
+      radius_km: 3,
       boundary_json: null,
       spread_direction: null,
       spread_speed: 0,
