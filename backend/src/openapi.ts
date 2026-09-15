@@ -20,6 +20,7 @@ const operations = [
   ["post", "/help-requests/{id}/cancel"],
   ["post", "/safe-checkins"],
   ["post", "/responders/availability"],
+  ["get", "/responders/me"],
   ["get", "/responders"],
   ["get", "/matches/{requestId}"],
   ["post", "/assignments"],

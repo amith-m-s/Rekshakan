@@ -1,5 +1,5 @@
 // Nominatim's usage policy requires an identifying User-Agent with contact info.
-const USER_AGENT = 'RescuerMapHackathon/1.0 (contact: REPLACE_WITH_MY_EMAIL)';
+const USER_AGENT = 'RescuerMapHackathon/1.0 (contact: nathan.bijo@gmail.com)';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);

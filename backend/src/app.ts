@@ -14,6 +14,7 @@ export function createApp() {
   db();
   const app = express();
   app.disable("x-powered-by");
+  if (process.env.NODE_ENV === "production") app.set("trust proxy", 1);
   app.use(
     "/docs",
     helmet({ contentSecurityPolicy: false }),
@@ -24,7 +25,14 @@ export function createApp() {
     helmet({
       contentSecurityPolicy: {
         directives: {
-          scriptSrc: ["'self'"],
+          scriptSrc: ["'self'", "https://unpkg.com"],
+          styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
+          imgSrc: [
+            "'self'",
+            "data:",
+            "https://*.tile.openstreetmap.org",
+            "https://unpkg.com",
+          ],
           connectSrc: ["'self'", "ws:", "wss:"],
         },
       },

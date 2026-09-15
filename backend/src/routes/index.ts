@@ -742,12 +742,25 @@ r.get("/responders", auth, roles("COORDINATOR", "ADMIN"), (_req, res) =>
     res,
     db()
       .prepare(
-        "SELECT r.*,u.name,u.email FROM responders r JOIN users u ON u.id=r.user_id",
+        "SELECT r.*,u.name,u.email,l.latitude,l.longitude,l.recorded_at location_recorded_at FROM responders r JOIN users u ON u.id=r.user_id LEFT JOIN locations l ON l.id=(SELECT id FROM locations WHERE user_id=r.user_id ORDER BY recorded_at DESC LIMIT 1)",
       )
       .all()
       .map(hydrateResponder),
   ),
 );
+r.get("/responders/me", auth, roles("RESPONDER"), (req, res) => {
+  const profile = db()
+    .prepare(
+      "SELECT r.*,u.name,u.email,l.latitude,l.longitude,l.recorded_at location_recorded_at FROM responders r JOIN users u ON u.id=r.user_id LEFT JOIN locations l ON l.id=(SELECT id FROM locations WHERE user_id=r.user_id ORDER BY recorded_at DESC LIMIT 1) WHERE r.user_id=?",
+    )
+    .get(req.user!.id) as any;
+  if (!profile)
+    return res.status(404).json({
+      success: false,
+      error: { code: "NOT_FOUND", message: "Responder profile missing" },
+    });
+  ok(res, hydrateResponder(profile));
+});
 r.get("/matches/:requestId", auth, roles("COORDINATOR", "ADMIN"), (req, res) =>
   ok(res, getMatches(String(req.params.requestId))),
 );

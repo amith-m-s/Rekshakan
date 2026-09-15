@@ -12,6 +12,7 @@ const app = createApp(),
   io = new Server(server, {
     cors: { origin: config.corsOrigins, credentials: true },
   });
+if (config.trustProxy) app.set("trust proxy", config.trustProxy);
 io.use((socket, next) => {
   try {
     const token = socket.handshake.auth.token;

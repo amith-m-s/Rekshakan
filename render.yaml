@@ -1,0 +1,55 @@
+# Free-tier deployment for the unified evaluation system. The Express service
+# hosts the role-based rescue console; the Next.js service hosts the statewide
+# fire and evacuation-zone intelligence dashboard.
+services:
+  - type: web
+    name: rescuermap-rset
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: backend
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm run start:render
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    numInstances: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 24.14.1
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_PATH
+        value: /tmp/rescuermap.db
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: PROVIDER_MODE
+        value: mock
+      - key: PROVIDER_TIMEOUT_MS
+        value: "5000"
+      - key: CORS_ORIGINS
+        value: https://rescuermap-dashboard-rset.onrender.com
+
+  - type: web
+    name: rescuermap-dashboard-rset
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: 24.14.1
+      - key: NODE_ENV
+        value: production
+      - key: RESCUERMAP_API_URL
+        value: https://rescuermap-rset.onrender.com
+      - key: NEXT_PUBLIC_RESCUERMAP_API_URL
+        value: https://rescuermap-rset.onrender.com
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false

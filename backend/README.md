@@ -2,7 +2,15 @@
 
 Single-process disaster assistance coordination backend for the hackathon MVP. It covers authenticated resident, responder, coordinator and admin workflows; deterministic severity, request priority, matching and escalation engines; human-authorized assignments/escalations; proximity alerts; shelters; community reports; abuse flags; audit timelines; analytics; real-time events; and a provider-backed wildfire simulator.
 
-The backend is map-library independent. It returns coordinates; a frontend may render them with Leaflet or any other client library.
+The backend returns operational coordinates to a role-based web console. Its command centre renders OpenStreetMap tiles, a request-risk heatmap, incident/alert radii, responders, shelters, help requests and reports with Leaflet. If remote map assets are unavailable, it automatically retains a local SVG operational map instead of displaying a blank panel.
+
+## Render deployment
+
+The repository-root `render.yaml` defines a free Node web service rooted at `backend/`, an HTTP health check and Node 24. Import the repository as a Render Blueprint and deploy `feature/rescuermap-backend-v2` (or merge it into `main` first). The startup command applies migrations automatically and seeds fictional demo records only when the database has no users.
+
+The production build explicitly installs development dependencies because the TypeScript compiler and declaration packages are build-time tools; they are not used by the running process.
+
+The free Render filesystem is ephemeral, so simulated requests and workflow changes can reset after a restart or redeploy. Startup recreates the demo dataset automatically, which is suitable for evaluation but not durable real-world storage. For persistent or horizontally scalable production data, migrate the persistence layer to a hosted PostgreSQL service. After Render assigns the final hostname, update `CORS_ORIGINS` if the service name or custom domain differs from `https://rescuermap.onrender.com`.
 
 ## Quick start
 

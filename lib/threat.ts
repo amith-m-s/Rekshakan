@@ -14,7 +14,8 @@ export function threatScore(zone: Zone, fires: Fire[], wind: Wind, maxPop: numbe
   const proximity = Math.max(0, 1 - nearest.km / 20);
   const delta = ((nearest.bear - wind.direction + 540) % 360) - 180;
   const alignment = Math.max(0, Math.cos((delta * Math.PI) / 180));
-  const exposure = maxPop ? zone.population / maxPop : 0;
+  // Live feed zones have no population; they score on fire proximity and wind only.
+  const exposure = maxPop && zone.population ? zone.population / maxPop : 0;
 
   const score = 0.6 * proximity + 0.3 * alignment * proximity + 0.1 * exposure;
 

@@ -28,6 +28,36 @@ describe("API rescue workflow", () => {
     const page = await request(app).get("/");
     expect(page.status).toBe(200);
     expect(page.text).toContain("RescuerMap Test Console");
+    expect(page.text).toContain("RESIDENT SAFETY");
+    expect(page.text).toContain("Responder operations");
+    expect(page.text).toContain("Operational map");
+    expect(page.text).toContain("leaflet@1.9.4");
+    expect(page.text).toContain("leaflet.heat@0.2.0");
+    expect(page.headers["content-security-policy"]).toContain(
+      "https://*.tile.openstreetmap.org",
+    );
+  });
+  it("uses one trusted proxy hop in production", () => {
+    const previous = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    const productionApp = createApp();
+    expect(productionApp.get("trust proxy fn")("127.0.0.1", 0)).toBe(true);
+    expect(productionApp.get("trust proxy fn")("127.0.0.1", 1)).toBe(false);
+    if (previous === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previous;
+  });
+  it("returns a responder-scoped profile with latest location", async () => {
+    const own = await request(app)
+      .get("/api/responders/me")
+      .set("Authorization", `Bearer ${responder}`);
+    expect(own.status).toBe(200);
+    expect(own.body.data.user_id).toBe("usr_responder");
+    expect(own.body.data.latitude).toBeTypeOf("number");
+    expect(own.body.data.capabilities).toContain("MEDICAL_FIRST_AID");
+    const denied = await request(app)
+      .get("/api/responders/me")
+      .set("Authorization", `Bearer ${resident}`);
+    expect(denied.status).toBe(403);
   });
   it("protects coordinator resources", async () => {
     expect(
