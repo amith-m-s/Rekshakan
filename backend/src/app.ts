@@ -23,6 +23,7 @@ export function createApp() {
   );
   app.use(
     helmet({
+      referrerPolicy: { policy: "strict-origin-when-cross-origin" },
       contentSecurityPolicy: {
         directives: {
           scriptSrc: ["'self'", "https://unpkg.com"],
@@ -30,6 +31,7 @@ export function createApp() {
           imgSrc: [
             "'self'",
             "data:",
+            "https://tile.openstreetmap.org",
             "https://*.tile.openstreetmap.org",
             "https://unpkg.com",
           ],

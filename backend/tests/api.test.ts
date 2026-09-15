@@ -27,6 +27,12 @@ describe("API rescue workflow", () => {
   it("serves the local test console", async () => {
     const page = await request(app).get("/");
     expect(page.status).toBe(200);
+    expect(page.headers["referrer-policy"]).toBe(
+      "strict-origin-when-cross-origin",
+    );
+    expect(page.headers["content-security-policy"]).toContain(
+      "https://tile.openstreetmap.org",
+    );
     expect(page.text).toContain("RescuerMap Test Console");
     expect(page.text).toContain("RESIDENT SAFETY");
     expect(page.text).toContain("Responder operations");

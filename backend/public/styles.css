@@ -331,7 +331,7 @@ header h2,
   margin-top: 14px;
   position: relative;
 }
-.operational-map svg {
+.offline-map > svg {
   display: block;
   width: 100%;
   height: auto;
@@ -1419,7 +1419,7 @@ header h2,
 .operational-map {
   min-height: 400px;
 }
-.operational-map svg {
+.offline-map > svg {
   border: 0;
   border-radius: 16px;
   box-shadow: inset 0 0 0 1px rgba(29, 70, 52, 0.05);

@@ -442,6 +442,8 @@ function renderLeafletMap(incident, points) {
     return;
   }
   try {
+    // Leaflet must measure a visible container before creating its SVG/canvas.
+    $("#leafletMap").classList.add("ready");
     const center = incident
       ? [incident.latitude, incident.longitude]
       : [37.15, -119.7];
@@ -451,9 +453,10 @@ function renderLeafletMap(incident, points) {
     );
     state.map = map;
     window.L.control.zoom({ position: "bottomright" }).addTo(map);
-    window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    window.L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
-      attribution: "© OpenStreetMap contributors",
+      attribution:
+        '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(map);
     if (incident) {
       window.L.circle([incident.latitude, incident.longitude], {
