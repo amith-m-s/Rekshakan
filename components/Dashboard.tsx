@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { AlertRecord, Fire, Report, ScoredZone, ZoneStatus, ZonesResponse } from '@/lib/types';
+import type { AlertRecord, Fire, Report, RescueIncident, ScoredZone, ZoneStatus, ZonesResponse } from '@/lib/types';
 import { ZONE_STATUSES } from '@/lib/types';
 import { LANGUAGES, REPORT_COLOR, STATUS_COLOR, compass, timeAgo, zoneCenter } from '@/lib/ui';
 
@@ -34,6 +34,7 @@ export default function Dashboard() {
   const [origin, setOrigin] = useState<OriginFilter>('all');
   const [error, setError] = useState<string | null>(null);
   const [rescueOnline, setRescueOnline] = useState(false);
+  const [rescueIncidents, setRescueIncidents] = useState<RescueIncident[]>([]);
 
   const loadZones = useCallback(
     () =>
@@ -61,14 +62,19 @@ export default function Dashboard() {
     return () => timers.forEach(clearInterval);
   }, [loadZones, loadReports, loadAlerts]);
 
+  // Incidents from the rescue operations console, drawn on the map. A successful response also means it's online.
   useEffect(() => {
-    fetch('/api/rescue-health')
-      .then(res => {
-        if (!res.ok) throw new Error('Rescue API unavailable');
-        return res.json();
-      })
-      .then(body => setRescueOnline(body?.online === true))
-      .catch(() => setRescueOnline(false));
+    const loadRescue = () =>
+      fetch('/api/rescue-incidents')
+        .then(res => res.json())
+        .then((body: { online?: boolean; incidents?: RescueIncident[] }) => {
+          setRescueOnline(body.online === true);
+          setRescueIncidents(body.incidents ?? []);
+        })
+        .catch(() => setRescueOnline(false));
+    loadRescue();
+    const timer = setInterval(loadRescue, 60_000);
+    return () => clearInterval(timer);
   }, []);
 
   // Push updates from Supabase realtime. Falls back to polling when it isn't configured or connected.
@@ -126,6 +132,7 @@ export default function Dashboard() {
 
   const live = zones.filter(z => z.origin === 'caloes');
   const orders = live.filter(z => z.status === 'order').length;
+  const openHelpRequests = rescueIncidents.reduce((n, i) => n + i.openHelpRequests, 0);
 
   return (
     <div className="flex h-full flex-col md:flex-row">
@@ -158,7 +165,17 @@ export default function Dashboard() {
             rel="noreferrer"
             className="mt-3 flex items-center justify-between rounded-md border border-emerald-900/70 bg-emerald-950/40 px-3 py-2 text-xs text-emerald-200 transition hover:border-emerald-600 hover:bg-emerald-950/70"
           >
-            <span><b className={`mr-2 inline-block h-2 w-2 rounded-full ${rescueOnline ? 'bg-emerald-400' : 'bg-amber-400'}`} />Rescue operations {rescueOnline ? 'online' : 'checking'}</span>
+            <span>
+              <b className={`mr-2 inline-block h-2 w-2 rounded-full ${rescueOnline ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+              Rescue operations {rescueOnline ? 'online' : 'checking'}
+              {rescueOnline && rescueIncidents.length > 0 && (
+                <span className="text-emerald-400/80">
+                  {' '}
+                  · {rescueIncidents.length} incident{rescueIncidents.length === 1 ? '' : 's'} · {openHelpRequests} open help request
+                  {openHelpRequests === 1 ? '' : 's'}
+                </span>
+              )}
+            </span>
             <strong>Open console →</strong>
           </a>
           <p className="text-xs text-zinc-500">California wildfire evacuations</p>
@@ -287,6 +304,8 @@ export default function Dashboard() {
           selectedId={selectedId}
           focusReport={focusReport}
           onSelectZone={setSelectedId}
+          rescueIncidents={rescueIncidents}
+          rescueConsoleUrl={RESCUE_API}
         />
         <Legend />
       </main>
@@ -340,6 +359,9 @@ function Legend() {
       </div>
       <div className="flex items-center gap-2">
         <span className="h-2.5 w-2.5 rounded-full border border-white bg-[#d946ef]" /> field report
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="h-2.5 w-2.5 rounded-full border border-dashed border-[#34d399] bg-[#34d399]/20" /> rescue incident
       </div>
       <div className="flex items-center gap-2">
         <span className="h-1 w-3 rounded bg-[#38bdf8]" /> evacuation route
