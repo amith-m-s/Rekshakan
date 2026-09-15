@@ -37,6 +37,15 @@ describe("API rescue workflow", () => {
       "https://*.tile.openstreetmap.org",
     );
   });
+  it("uses one trusted proxy hop in production", () => {
+    const previous = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    const productionApp = createApp();
+    expect(productionApp.get("trust proxy fn")("127.0.0.1", 0)).toBe(true);
+    expect(productionApp.get("trust proxy fn")("127.0.0.1", 1)).toBe(false);
+    if (previous === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previous;
+  });
   it("returns a responder-scoped profile with latest location", async () => {
     const own = await request(app)
       .get("/api/responders/me")
