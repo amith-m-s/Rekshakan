@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RescuerMap phone simulator</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Phone simulator</h1>
+        <p id="target" class="muted">Loading…</p>
+      </div>
+      <div class="header-right">
+        <span id="rate" class="muted"></span>
+        <span id="conn" class="badge off">connecting…</span>
+      </div>
+    </header>
+
+    <p id="flash" class="flash" hidden></p>
+
+    <main>
+      <section class="panel controls">
+        <h2>Add a phone</h2>
+        <form id="add-phone" class="stack">
+          <input name="name" placeholder="Name (optional)" maxlength="40" />
+          <select name="spotId" class="spot-select"></select>
+          <button>Add phone</button>
+        </form>
+
+        <h2>Scenarios</h2>
+        <p id="scenario-status" class="muted">No scenario running.</p>
+
+        <form id="burst" class="stack scenario">
+          <strong>Burst</strong>
+          <span class="muted">Phones near one place each report once.</span>
+          <label>Place <select name="spotId" class="spot-select"></select></label>
+          <label>Phones <input name="count" type="number" value="5" min="1" max="20" /></label>
+          <label>Type <select name="kind" class="kind-select"><option value="mixed">mixed</option></select></label>
+          <button>Start burst</button>
+        </form>
+
+        <form id="stream" class="stack scenario">
+          <strong>Stream</strong>
+          <span class="muted">A random phone reports on a timer.</span>
+          <label>Every <input name="intervalSeconds" type="number" value="8" min="2" max="300" /> seconds</label>
+          <button>Start stream</button>
+        </form>
+
+        <form id="evacuation" class="stack scenario">
+          <strong>Evacuation</strong>
+          <span class="muted">Phones drive away from a zone, reporting on the way.</span>
+          <label>From <select name="spotId" class="spot-select"></select></label>
+          <label>To <select name="destinationSpotId" class="spot-select" data-default="sacramento"></select></label>
+          <label>Phones <input name="count" type="number" value="4" min="1" max="20" /></label>
+          <label>Report every <input name="intervalSeconds" type="number" value="10" min="2" max="300" /> seconds</label>
+          <button>Start evacuation</button>
+        </form>
+
+        <button id="stop" type="button" class="secondary">Stop scenario</button>
+
+        <h2>Notify all phones</h2>
+        <form id="notify" class="stack">
+          <input name="title" placeholder="Title" maxlength="120" required />
+          <input name="body" placeholder="Message" maxlength="1000" />
+          <button>Send notification</button>
+        </form>
+
+        <button id="refresh-spots" type="button" class="secondary">Reload live zones</button>
+      </section>
+
+      <section id="phones" class="phones" aria-live="polite"></section>
+
+      <section class="panel log-panel">
+        <h2>Log</h2>
+        <ol id="log"></ol>
+      </section>
+    </main>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

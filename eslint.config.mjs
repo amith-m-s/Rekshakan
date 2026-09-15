@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Separate Express app with its own package.json, tsconfig and lint setup.
+    "backend/**",
+    // Standalone Node phone simulator; not part of the Next.js app.
+    "simulator/**",
   ]),
 ]);
 
