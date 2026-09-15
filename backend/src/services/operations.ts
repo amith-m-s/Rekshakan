@@ -79,7 +79,7 @@ export function createHelpRequest(userId: string, body: any) {
         body.category === "MEDICAL"
           ? "MEDICAL_EMERGENCY"
           : "COMMUNITY_EMERGENCY",
-      name: `${String(body.category).replaceAll("_", " ")} request`,
+      name: "Assistance event",
       description:
         "Created automatically from a verified resident assistance request",
       latitude: body.latitude,

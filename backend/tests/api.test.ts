@@ -290,20 +290,28 @@ describe("API rescue workflow", () => {
     expect(incident.body.data.source_type).toBe("COMMUNITY");
     expect(incident.body.data.latitude).toBe(40.2);
     expect(incident.body.data.radius_km).toBe(3);
-    const second = await request(app)
-      .post("/api/help-requests")
-      .set("Authorization", `Bearer ${resident}`)
-      .send({
-        clientRequestId: "test-nearby-request",
-        latitude: 40.201,
-        longitude: -124.101,
-        category: "MEDICAL",
-        peopleCount: 1,
-        medicalEmergency: true,
-        vulnerabilities: [],
-        immediateDanger: true,
-      });
-    expect(second.body.data.incident_id).toBe(created.body.data.incident_id);
+    for (const [index, category] of [
+      "MEDICAL",
+      "STRANDED",
+      "TRANSPORTATION",
+    ].entries()) {
+      const nearby = await request(app)
+        .post("/api/help-requests")
+        .set("Authorization", `Bearer ${resident}`)
+        .send({
+          clientRequestId: `test-nearby-${category.toLowerCase()}`,
+          latitude: 40.201 + index * 0.001,
+          longitude: -124.101,
+          category,
+          peopleCount: 1,
+          medicalEmergency: category === "MEDICAL",
+          vulnerabilities: [],
+          immediateDanger: true,
+        });
+      expect(nearby.status).toBe(201);
+      expect(nearby.body.data.category).toBe(category);
+      expect(nearby.body.data.incident_id).toBe(created.body.data.incident_id);
+    }
     const updated = await request(app)
       .get(`/api/incidents/${created.body.data.incident_id}`)
       .set("Authorization", `Bearer ${coordinator}`);

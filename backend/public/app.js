@@ -424,7 +424,12 @@ function renderOperationalMap() {
   // Tear Leaflet down while its original container is still attached. Replacing
   // the container first leaves Leaflet holding a detached DOM node on refresh.
   if (state.map) {
-    state.map.remove();
+    try {
+      state.map.off();
+      state.map.remove();
+    } catch (error) {
+      console.warn("Previous map cleanup failed", error);
+    }
     state.map = null;
   }
   $("#operationalMap").innerHTML =
