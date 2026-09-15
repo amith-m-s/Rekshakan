@@ -1,6 +1,9 @@
+# Free-tier deployment for the unified evaluation system. The Express service
+# hosts the role-based rescue console; the Next.js service hosts the statewide
+# fire and evacuation-zone intelligence dashboard.
 services:
   - type: web
-    name: rescuermap
+    name: rescuermap-rset
     runtime: node
     plan: free
     region: singapore
@@ -24,6 +27,34 @@ services:
       - key: PROVIDER_MODE
         value: mock
       - key: PROVIDER_TIMEOUT_MS
-        value: 5000
+        value: "5000"
       - key: CORS_ORIGINS
-        value: https://rescuermap.onrender.com
+        value: https://rescuermap-dashboard-rset.onrender.com
+      # Seed demo data at live Cal OES zones and import field reports and alerts from the dashboard.
+      - key: INTELLIGENCE_URL
+        value: https://rescuermap-dashboard-rset.onrender.com
+      - key: INTELLIGENCE_SYNC_SECONDS
+        value: "60"
+
+  - type: web
+    name: rescuermap-dashboard-rset
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: 24.14.1
+      - key: NODE_ENV
+        value: production
+      - key: RESCUERMAP_API_URL
+        value: https://rescuermap-rset.onrender.com
+      - key: NEXT_PUBLIC_RESCUERMAP_API_URL
+        value: https://rescuermap-rset.onrender.com
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false

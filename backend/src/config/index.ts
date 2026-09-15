@@ -11,10 +11,18 @@ export const config = {
   jwtSecret:
     process.env.JWT_SECRET || "development-only-secret-change-me-32chars",
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "8h",
+  // Number of reverse proxies in front of the app (1 on Render). Lets rate limiting see real client IPs.
+  trustProxy: num(process.env.TRUST_PROXY, 0),
   corsOrigins: (
     process.env.CORS_ORIGINS || "http://localhost:3000,http://localhost:5173"
   ).split(","),
   providerMode: process.env.PROVIDER_MODE === "real" ? "real" : "mock",
+  // Statewide intelligence dashboard (repo-root Next.js app). Seeding places demo data at its live Cal OES
+  // zones, and the sync imports its field reports and alerts. Set INTELLIGENCE_URL="" to disable both.
+  intelligenceUrl: (
+    process.env.INTELLIGENCE_URL ?? "https://rescuermap-dashboard-rset.onrender.com"
+  ).replace(/\/+$/, ""),
+  intelligenceSyncSeconds: num(process.env.INTELLIGENCE_SYNC_SECONDS, 60),
   providerTimeoutMs: num(process.env.PROVIDER_TIMEOUT_MS, 5000),
   severityWeights: {
     threat: 0.18,

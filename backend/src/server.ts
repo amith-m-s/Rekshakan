@@ -7,11 +7,13 @@ import { db } from "./db/index.js";
 import { setIo } from "./services/runtime.js";
 import { log } from "./utils/core.js";
 import { warmProviders } from "./integrations/providers/index.js";
+import { startIntelligenceSync } from "./services/intelligence.js";
 const app = createApp(),
   server = http.createServer(app),
   io = new Server(server, {
     cors: { origin: config.corsOrigins, credentials: true },
   });
+if (config.trustProxy) app.set("trust proxy", config.trustProxy);
 io.use((socket, next) => {
   try {
     const token = socket.handshake.auth.token;
@@ -37,7 +39,8 @@ io.on("connection", (socket) => {
 });
 setIo(io);
 void warmProviders();
-server.listen(config.port, "0.0.0.0", () =>
-  log("info", "server_started", { port: config.port }),
-);
+server.listen(config.port, "0.0.0.0", () => {
+  log("info", "server_started", { port: config.port });
+  startIntelligenceSync();
+});
 export { server, io };
