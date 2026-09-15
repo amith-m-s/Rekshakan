@@ -60,6 +60,27 @@ export async function seedAccountsOnly() {
   }
   return { users: demoUsers.length };
 }
+
+export function seedDemoOperation() {
+  const active = db()
+    .prepare(
+      "SELECT id FROM incidents WHERE status IN ('DETECTED','ACTIVE') LIMIT 1",
+    )
+    .get();
+  if (active) return null;
+  return createHelpRequest("usr_resident2", {
+    clientRequestId: "demo-ready-evacuation",
+    latitude: DEMO_GEOGRAPHY.incident.latitude,
+    longitude: DEMO_GEOGRAPHY.incident.longitude,
+    category: "EVACUATION",
+    description: "Demo resident is stranded near a blocked evacuation route",
+    peopleCount: 1,
+    medicalEmergency: false,
+    vulnerabilities: [],
+    immediateDanger: true,
+  });
+}
+
 export async function seed() {
   const d = db(),
     t = now();

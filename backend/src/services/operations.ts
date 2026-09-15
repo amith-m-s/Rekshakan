@@ -13,6 +13,51 @@ import { emitOperational, emitToRoles, emitToUsers } from "./runtime.js";
 
 const closedRequestStatuses = "('SAFE','CLOSED','CANCELLED')";
 
+function activateStandbyResponders(incident: any) {
+  const standby = db()
+    .prepare(
+      "SELECT id,user_id FROM responders WHERE verification_status='VERIFIED' AND current_incident_id IS NULL AND current_assignment_id IS NULL AND status IN ('OFFLINE','UNAVAILABLE','AVAILABLE') ORDER BY id LIMIT 2",
+    )
+    .all() as Array<{ id: string; user_id: string }>;
+  const timestamp = now();
+  standby.forEach((responder, index) => {
+    const latitude = incident.latitude + 0.006 + index * 0.004;
+    const longitude = incident.longitude + 0.004 + index * 0.004;
+    db().transaction(() => {
+      db()
+        .prepare(
+          "UPDATE responders SET availability=1,status='AVAILABLE',current_incident_id=?,updated_at=? WHERE id=?",
+        )
+        .run(incident.id, timestamp, responder.id);
+      db()
+        .prepare(
+          "INSERT INTO locations(id,user_id,incident_id,assignment_id,latitude,longitude,accuracy,source,sharing_state,state,recorded_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+        )
+        .run(
+          id("loc"),
+          responder.user_id,
+          incident.id,
+          null,
+          latitude,
+          longitude,
+          25,
+          "SIMULATED",
+          "SHARED",
+          "AVAILABLE",
+          timestamp,
+        );
+    })();
+    emitOperational("responder.status_changed", {
+      responderId: responder.id,
+      incidentId: incident.id,
+      availability: true,
+      status: "AVAILABLE",
+      latitude,
+      longitude,
+    });
+  });
+}
+
 export function notify(
   userId: string | null,
   incidentId: string | null,
@@ -111,6 +156,7 @@ export function createHelpRequest(userId: string, body: any) {
       latitude: body.latitude,
       longitude: body.longitude,
     });
+    activateStandbyResponders(incident);
     emitOperational("incident.created", incident, [userId]);
   }
   if (!incident)

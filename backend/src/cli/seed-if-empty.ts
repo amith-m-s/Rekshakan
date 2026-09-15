@@ -1,5 +1,5 @@
 import { closeDb, db } from "../db/index.js";
-import { seedAccountsOnly } from "../seed/index.js";
+import { seedAccountsOnly, seedDemoOperation } from "../seed/index.js";
 import { DEMO_GEOGRAPHY } from "../config/geography.js";
 
 function alignLegacyDemoGeography() {
@@ -62,11 +62,17 @@ async function main() {
   };
   if (users.count === 0) {
     await seedAccountsOnly();
-    console.log("Seeded RescuerMap demo accounts; operations start empty");
+    console.log("Seeded RescuerMap demo accounts");
   } else {
     console.log(`Database already initialized with ${users.count} users`);
   }
   alignLegacyDemoGeography();
+  const operation = seedDemoOperation() as any;
+  if (operation)
+    console.log(
+      `Seeded minimal demo operation ${operation.incident_id} with request ${operation.id}`,
+    );
+  else console.log("Active operation already exists; demo seed skipped");
   closeDb();
 }
 
