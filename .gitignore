@@ -49,3 +49,6 @@ next-env.d.ts
 # local secrets / scratch
 .env.local
 test-groq.mjs
+
+# Local Android packages (rebuild from the committed Expo source).
+/releases/*.apk

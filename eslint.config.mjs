@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Separate Express app with its own package.json, tsconfig and lint setup.
     "backend/**",
+    // Expo Android app with its own TypeScript configuration.
+    "mobile/**",
     // Standalone Node phone simulator; not part of the Next.js app.
     "simulator/**",
   ]),
