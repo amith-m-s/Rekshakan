@@ -374,6 +374,7 @@ Things that break builds if forgotten:
 | Render deploy stuck "unhealthy" | App crashed, or health check returns 401 | Read the deploy logs; don't set `DASHBOARD_PASSWORD` (3.3) |
 | Simulator reports rejected / throttled | Wrong `TARGET_URL`, or rate limits | [SIMULATOR.md Part 9](SIMULATOR.md#part-9-troubleshooting) |
 | `EADDRINUSE` locally | Old process still on the port | 2.5 stop script |
+| `npm ci` fails with **EPERM … unlink … .node** (e.g. `lightningcss.win32-x64-msvc.node`) | A running `next dev`/`next start` (or the simulator/backend) still has that native file loaded, so Windows won't delete it. `npm ci` stops half-way and leaves `node_modules` incomplete | Stop every Node process from the project (Ctrl+C in each window, or the 2.5 stop script; check with `Get-Process node`), then run `npm ci` again. If it still fails, pause OneDrive syncing and retry |
 | `npm run build` very slow or killed | Low memory | Stop dev servers and other apps; build one project at a time |
 | Backend: `NODE_MODULE_VERSION` error | Node version changed | `cd backend; npm run rebuild:sqlite` |
 
