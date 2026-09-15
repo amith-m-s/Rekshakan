@@ -20,6 +20,7 @@ import { emitOperational, emitToRoles } from "../services/runtime.js";
 import { id, now, parseJson } from "../utils/core.js";
 import { providerHealth, providers } from "../integrations/providers/index.js";
 import { simulatorControl, simulatorStart } from "../services/simulator.js";
+import { intelligenceStatus, syncIntelligence } from "../services/intelligence.js";
 
 const r = Router();
 const ok = (res: any, data: any, status = 200) =>
@@ -1712,6 +1713,54 @@ r.get("/simulator", auth, roles("COORDINATOR", "ADMIN"), (_req, res) => {
     s ? { ...s, config: parseJson(s.config, {}) } : { status: "NOT_STARTED" },
   );
 });
+// Incident summaries for the statewide intelligence dashboard's map. Public, so aggregates only: incident
+// positions and counts, never resident or responder locations or identities.
+r.get("/public/incidents", (_req, res) => {
+  const count = (sql: string, incidentId: string) =>
+    (db().prepare(sql).get(incidentId) as { n: number }).n;
+  const open = "status NOT IN ('SAFE','CLOSED','CANCELLED')";
+  const incidents = db()
+    .prepare(
+      "SELECT id,disaster_type,name,latitude,longitude,radius_km,status,severity_score,severity_level,source_type,updated_at FROM incidents WHERE status IN ('DETECTED','ACTIVE') ORDER BY severity_score DESC",
+    )
+    .all() as Array<{ id: string }>;
+  ok(
+    res,
+    incidents.map((incident) => ({
+      ...incident,
+      openHelpRequests: count(
+        `SELECT count(*) n FROM help_requests WHERE incident_id=? AND ${open}`,
+        incident.id,
+      ),
+      criticalHelpRequests: count(
+        `SELECT count(*) n FROM help_requests WHERE incident_id=? AND priority_level='CRITICAL' AND ${open}`,
+        incident.id,
+      ),
+      respondersEngaged: count(
+        "SELECT count(*) n FROM responders WHERE current_incident_id=?",
+        incident.id,
+      ),
+      sheltersOpen: count(
+        "SELECT count(*) n FROM shelters WHERE incident_id=? AND status='OPEN'",
+        incident.id,
+      ),
+      reports: count(
+        "SELECT count(*) n FROM community_reports WHERE incident_id=?",
+        incident.id,
+      ),
+    })),
+  );
+});
+// Link to the statewide intelligence dashboard: last sync result, and a manual sync trigger.
+r.get("/intelligence/status", auth, roles("COORDINATOR", "ADMIN"), (_req, res) =>
+  ok(res, intelligenceStatus()),
+);
+r.post(
+  "/intelligence/sync",
+  auth,
+  roles("COORDINATOR", "ADMIN"),
+  asyncRoute(async (_req: any, res: any) => ok(res, await syncIntelligence())),
+);
 r.get("/health", (_req, res) => {
   let database = "up";
   try {
