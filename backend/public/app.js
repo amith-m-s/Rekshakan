@@ -447,7 +447,7 @@ function renderLeafletMap(incident, points) {
       : [37.15, -119.7];
     const map = window.L.map("leafletMap", { zoomControl: false }).setView(
       center,
-      incident ? 13 : 6,
+      incident ? 12 : 6,
     );
     state.map = map;
     window.L.control.zoom({ position: "bottomright" }).addTo(map);
@@ -457,28 +457,16 @@ function renderLeafletMap(incident, points) {
     }).addTo(map);
     if (incident) {
       window.L.circle([incident.latitude, incident.longitude], {
-        radius: incident.radius_km * 1600,
-        color: "#e59b35",
-        weight: 2,
-        dashArray: "8 7",
-        fillColor: "#f1b557",
-        fillOpacity: 0.08,
-      })
-        .bindPopup(
-          `<b>Alert radius</b><br>${incident.radius_km} km operational zone`,
-        )
-        .addTo(map);
-      window.L.circle([incident.latitude, incident.longitude], {
         radius: incident.radius_km * 1000,
-        color: "#c9322c",
-        weight: 3,
-        fillColor: "#e94a40",
-        fillOpacity: 0.28,
+        color: "#d5282e",
+        weight: 4,
+        fillColor: "#ef4444",
+        fillOpacity: 0.16,
       })
         .bindPopup(
-          `<b>${escapeHtml(incident.name)}</b><br>${incident.severity_level} · ${incident.severity_score}/100`,
+          `<b>3 km alert zone</b><br>${escapeHtml(incident.name)} · ${incident.severity_level} ${incident.severity_score}/100`,
         )
-        .bindTooltip(`${incident.radius_km} km operational radius`)
+        .bindTooltip("3 km alert zone", { sticky: true })
         .addTo(map);
     }
     const groups = {
@@ -612,26 +600,10 @@ function renderLeafletMap(incident, points) {
     window.L.control
       .layers(null, groups, { collapsed: true, position: "topright" })
       .addTo(map);
-    const bounds = window.L.latLngBounds(
-      incident ? [[incident.latitude, incident.longitude]] : [],
-    );
-    points.forEach((p) => bounds.extend([p.latitude, p.longitude]));
-    if (bounds.isValid()) {
-      try {
-        map.fitBounds(bounds.pad(0.28), { maxZoom: 14 });
-      } catch {
-        map.setView(center, incident ? 14 : 6);
-      }
-    }
-    const focused = points.find((point) => point.id === state.focusRequestId);
-    if (focused) {
-      try {
-        map.flyTo([focused.latitude, focused.longitude], 15);
-      } catch {
-        map.setView([focused.latitude, focused.longitude], 15);
-      }
-      state.focusRequestId = null;
-    }
+    // Every request assigned to this incident is within its 3 km boundary, so a
+    // fixed neighborhood view keeps both the pin and alert circle visible.
+    map.setView(center, incident ? 12 : 6);
+    state.focusRequestId = null;
     $("#offlineMap").classList.add("hidden");
     $("#leafletMap").classList.add("ready");
     $("#mapMode").textContent = incident

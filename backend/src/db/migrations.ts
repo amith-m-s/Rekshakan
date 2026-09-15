@@ -33,4 +33,8 @@ export const migrations = [
     id: "004_community_incident_radius",
     sql: "UPDATE incidents SET radius_km=3,updated_at=datetime('now') WHERE source_type='COMMUNITY' AND status IN ('DETECTED','ACTIVE');",
   },
+  {
+    id: "005_neutral_community_event_name",
+    sql: "UPDATE incidents SET name='Assistance event',updated_at=datetime('now') WHERE source_type='COMMUNITY' AND status IN ('DETECTED','ACTIVE');",
+  },
 ] as const;
