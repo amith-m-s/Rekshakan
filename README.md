@@ -43,6 +43,8 @@ usage instructions.
 
 ## Setup
 
+**Run the entire system (local and deployed, demo day, troubleshooting): [docs/RUNBOOK.md](docs/RUNBOOK.md).**
+
 Full step-by-step guide (keys, Supabase schema, deployment, checks): **[docs/SETUP.md](docs/SETUP.md)**.
 Phone app that sends spoofed-location field reports, and the dashboard's reaction to them:
 **[docs/MOBILE.md](docs/MOBILE.md)**.
