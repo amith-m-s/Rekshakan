@@ -1,3 +1,10 @@
+[![Top Language](https://img.shields.io/github/languages/top/amith-m-s/Rekshakan)](https://github.com/amith-m-s/Rekshakan)
+[![Code Size](https://img.shields.io/github/languages/code-size/amith-m-s/Rekshakan)](https://github.com/amith-m-s/Rekshakan)
+[![Repo Size](https://img.shields.io/github/repo-size/amith-m-s/Rekshakan)](https://github.com/amith-m-s/Rekshakan)
+[![Last Commit](https://img.shields.io/github/last-commit/amith-m-s/Rekshakan)](https://github.com/amith-m-s/Rekshakan/commits/main)
+[![Issues](https://img.shields.io/github/issues/amith-m-s/Rekshakan)](https://github.com/amith-m-s/Rekshakan/issues)
+[![Stars](https://img.shields.io/github/stars/amith-m-s/Rekshakan)](https://github.com/amith-m-s/Rekshakan/stargazers)
+
 # RescuerMap
 
 Wildfire evacuation dashboard for California.
