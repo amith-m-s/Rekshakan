@@ -68,6 +68,25 @@ describe("API rescue workflow", () => {
       ).status,
     ).toBe(403);
   });
+  it("seeds California incidents and exposes only aggregates publicly", async () => {
+    const pub = await request(app).get("/api/public/incidents");
+    expect(pub.status).toBe(200);
+    const primary = pub.body.data.find((x: any) => x.id === "inc_demo");
+    expect(primary.latitude).toBeGreaterThan(32);
+    expect(primary.latitude).toBeLessThan(42.1);
+    expect(primary.longitude).toBeGreaterThan(-124.5);
+    expect(primary.longitude).toBeLessThan(-114);
+    expect(primary.openHelpRequests).toBeGreaterThan(0);
+    expect(primary).not.toHaveProperty("severity_factors");
+    expect(JSON.stringify(pub.body.data)).not.toContain("resident");
+    const shelters = await request(app)
+      .get("/api/shelters?incidentId=inc_demo")
+      .set("Authorization", `Bearer ${coordinator}`);
+    expect(shelters.body.data[0].name).toContain("evacuation shelter");
+    expect(
+      (await request(app).get("/api/intelligence/status").set("Authorization", `Bearer ${resident}`)).status,
+    ).toBe(403);
+  });
   it("runs need-help through transactional shelter, safe, and closure", async () => {
     const severityBefore = (
       await request(app)
@@ -80,8 +99,8 @@ describe("API rescue workflow", () => {
       .send({
         clientRequestId: "test-happy-path",
         incidentId: "inc_demo",
-        latitude: 12.892,
-        longitude: 77.602,
+        latitude: 38.756,
+        longitude: -122.612,
         category: "MEDICAL",
         description: "Test emergency",
         peopleCount: 1,
@@ -104,8 +123,8 @@ describe("API rescue workflow", () => {
       .send({
         clientRequestId: "test-happy-path",
         incidentId: "inc_demo",
-        latitude: 12.892,
-        longitude: 77.602,
+        latitude: 38.756,
+        longitude: -122.612,
         category: "MEDICAL",
         peopleCount: 1,
         medicalEmergency: true,
@@ -216,8 +235,8 @@ describe("API rescue workflow", () => {
       .send({
         clientRequestId: "safe-during-assignment",
         incidentId: "inc_demo",
-        latitude: 12.9,
-        longitude: 77.61,
+        latitude: 38.747,
+        longitude: -122.606,
         category: "EVACUATION",
         peopleCount: 1,
         medicalEmergency: false,

@@ -2,8 +2,8 @@
 
 import 'leaflet/dist/leaflet.css';
 import { useEffect } from 'react';
-import { CircleMarker, GeoJSON, MapContainer, Polyline, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet';
-import type { Fire, Report, ScoredZone } from '@/lib/types';
+import { Circle, CircleMarker, GeoJSON, MapContainer, Polyline, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet';
+import type { Fire, Report, RescueIncident, ScoredZone } from '@/lib/types';
 import { REPORT_COLOR, STATUS_COLOR, zoneBounds } from '@/lib/ui';
 
 // CARTO basemaps show an "API key required" watermark unless the key is passed on each tile.
@@ -18,6 +18,8 @@ interface Props {
   selectedId: string | null;
   focusReport: Report | null;
   onSelectZone: (id: string) => void;
+  rescueIncidents: RescueIncident[];
+  rescueConsoleUrl: string;
 }
 
 function Focus({ zone, report, route }: { zone?: ScoredZone; report: Report | null; route: GeoJSON.LineString | null }) {
@@ -46,7 +48,17 @@ function Focus({ zone, report, route }: { zone?: ScoredZone; report: Report | nu
   return null;
 }
 
-export default function ZoneMap({ zones, fires, reports, route, selectedId, focusReport, onSelectZone }: Props) {
+export default function ZoneMap({
+  zones,
+  fires,
+  reports,
+  route,
+  selectedId,
+  focusReport,
+  onSelectZone,
+  rescueIncidents,
+  rescueConsoleUrl,
+}: Props) {
   const selected = zones.find(z => z.id === selectedId);
 
   return (
@@ -78,6 +90,30 @@ export default function ZoneMap({ zones, fires, reports, route, selectedId, focu
             {z.status} · threat {z.threat.score.toFixed(2)}
           </Tooltip>
         </GeoJSON>
+      ))}
+
+      {rescueIncidents.map(incident => (
+        <Circle
+          key={incident.id}
+          center={[incident.latitude, incident.longitude]}
+          radius={Math.max(500, incident.radius_km * 1000)}
+          pathOptions={{ color: '#34d399', weight: 2, dashArray: '6 6', fillColor: '#34d399', fillOpacity: 0.08 }}
+        >
+          <Popup>
+            <strong>Rescue incident: {incident.name}</strong>
+            <br />
+            {incident.severity_level.replace('_', ' ')} · severity {incident.severity_score}/100 · {incident.status.toLowerCase()}
+            <br />
+            {incident.openHelpRequests} open help request{incident.openHelpRequests === 1 ? '' : 's'}
+            {incident.criticalHelpRequests > 0 && ` (${incident.criticalHelpRequests} critical)`} · {incident.respondersEngaged}{' '}
+            responder{incident.respondersEngaged === 1 ? '' : 's'} · {incident.sheltersOpen} shelter
+            {incident.sheltersOpen === 1 ? '' : 's'} open · {incident.reports} report{incident.reports === 1 ? '' : 's'}
+            <br />
+            <a href={rescueConsoleUrl} target="_blank" rel="noreferrer">
+              Open rescue console →
+            </a>
+          </Popup>
+        </Circle>
       ))}
 
       {fires.map((f, i) => (

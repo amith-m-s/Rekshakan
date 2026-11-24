@@ -125,6 +125,7 @@ function connectSocket() {
     "responder.location_updated",
     "shelter.status_changed",
     "escalation.created",
+    "intelligence.synced",
   ].forEach((event) =>
     socket.on(event, () => {
       addActivity(event);
@@ -683,11 +684,13 @@ async function loadSimulator() {
 }
 async function startSimulator() {
   try {
+    const lat = $("#simLat").value.trim();
+    const lng = $("#simLng").value.trim();
     await api("/simulator/start", {
       method: "POST",
       body: JSON.stringify({
-        latitude: Number($("#simLat").value),
-        longitude: Number($("#simLng").value),
+        // Blank coordinates: the server places the drill beside the most severe real California incident.
+        ...(lat && lng ? { latitude: Number(lat), longitude: Number(lng) } : {}),
         severity: Number($("#simSeverity").value),
         responders: Number($("#simResponders").value),
         reports: 3,

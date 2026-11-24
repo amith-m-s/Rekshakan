@@ -12,6 +12,37 @@ The production build explicitly installs development dependencies because the Ty
 
 The free Render filesystem is ephemeral, so simulated requests and workflow changes can reset after a restart or redeploy. Startup recreates the demo dataset automatically, which is suitable for evaluation but not durable real-world storage. For persistent or horizontally scalable production data, migrate the persistence layer to a hosted PostgreSQL service. After Render assigns the final hostname, update `CORS_ORIGINS` if the service name or custom domain differs from `https://rescuermap.onrender.com`.
 
+## California data and the statewide intelligence link
+
+The console is linked to the statewide intelligence dashboard (the repository-root Next.js app,
+`https://rescuermap-dashboard-rset.onrender.com`), configured with `INTELLIGENCE_URL`.
+
+- **Seeding from real data.** `npm run seed` and startup seeding (`seed:if-empty`) pull the dashboard's live Cal OES
+  evacuation zones and NASA FIRMS hotspots. The most threatened zone in each of the top three counties becomes an
+  incident (the first keeps the id `inc_demo`), satellite detections within 30 km become verified smoke/fire
+  reports, and each incident gets a demo shelter in the nearest town outside its radius. Demo residents,
+  responders and help requests are placed around the primary incident. If the dashboard can't be reached, three
+  clearly labelled offline California samples (Lake, Monterey and Mendocino counties) are used instead. Tests
+  always use the offline samples.
+- **Dashboard → console sync.** Every `INTELLIGENCE_SYNC_SECONDS` (60) the server imports the dashboard's field
+  reports from the last 48 hours (phone app, phone simulator) as community reports on the nearest incident within
+  50 km. "Needs help" reports also become help requests ready to match and assign. Fires, smoke and help requests
+  farther than 50 km from any incident open a new `DETECTED` incident. Alerts generated on the dashboard become
+  console notifications. Imports are idempotent. Imported records belong to two `SYSTEM` accounts that can't log in.
+- **Console → dashboard.** `GET /api/public/incidents` (no auth) returns active incidents with aggregate counts
+  (open and critical help requests, engaged responders, open shelters, reports) and no personal data. The dashboard
+  draws them as a map layer.
+- **Status.** `GET /api/intelligence/status` shows the last sync result; `POST /api/intelligence/sync` runs one now
+  (coordinator/admin).
+- The wildfire simulator starts its drill beside the most severe real incident unless coordinates are given.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `INTELLIGENCE_URL` | `https://rescuermap-dashboard-rset.onrender.com` | Dashboard to seed from and sync with. `""` disables both (offline samples, no sync) |
+| `INTELLIGENCE_SYNC_SECONDS` | `60` | Sync interval; `0` disables the sync |
+
+For local development against a local dashboard, set `INTELLIGENCE_URL=http://localhost:3000`.
+
 ## Quick start
 
 Requires Node.js 24. The repository includes `.nvmrc` pinned to the verified runtime.
@@ -93,7 +124,7 @@ Login as coordinator/admin, then:
 ```bash
 curl -X POST http://localhost:4000/api/simulator/start \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  -d '{"latitude":12.9716,"longitude":77.5946,"severity":60,"responders":4,"reports":3}'
+  -d '{"severity":60,"responders":4,"reports":3}'   # starts beside the most severe real California incident
 
 curl -X POST http://localhost:4000/api/simulator/control \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \

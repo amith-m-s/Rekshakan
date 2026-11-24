@@ -82,3 +82,23 @@ export interface Report {
   reporter: string | null;
   created_at: string;
 }
+
+// Incident summary from the rescue operations API (GET /api/public/incidents). Aggregates only, no personal data.
+export interface RescueIncident {
+  id: string;
+  disaster_type: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  radius_km: number;
+  status: string;
+  severity_score: number;
+  severity_level: string;
+  source_type: string;
+  updated_at: string;
+  openHelpRequests: number;
+  criticalHelpRequests: number;
+  respondersEngaged: number;
+  sheltersOpen: number;
+  reports: number;
+}

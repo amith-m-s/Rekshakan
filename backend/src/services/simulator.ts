@@ -25,9 +25,10 @@ export type SimulatorConfig = {
   reports: number;
   responders: number;
 };
+// Used when there is no real incident to anchor the drill to: Middletown, Lake County, California.
 const defaults: SimulatorConfig = {
-  latitude: 12.9716,
-  longitude: 77.5946,
+  latitude: 38.7524,
+  longitude: -122.615,
   initialRadius: 1.2,
   spreadSpeed: 2.4,
   spreadDirection: 65,
@@ -44,9 +45,24 @@ export async function simulatorStart(
   input: Partial<SimulatorConfig>,
   actorId: string,
 ) {
-  const c = { ...defaults, ...input },
+  // Run the drill beside the most severe real (Cal OES) incident unless coordinates are given.
+  const anchor = db()
+    .prepare(
+      "SELECT name,latitude,longitude FROM incidents WHERE source_type != 'SIMULATED' AND status IN ('DETECTED','ACTIVE') ORDER BY severity_score DESC LIMIT 1",
+    )
+    .get() as { name: string; latitude: number; longitude: number } | undefined;
+  const c = {
+      ...defaults,
+      ...(anchor
+        ? { latitude: anchor.latitude + 0.02, longitude: anchor.longitude - 0.025 }
+        : {}),
+      ...input,
+    },
     t = now(),
-    incId = id("inc");
+    incId = id("inc"),
+    drillName = anchor
+      ? `Simulated wildfire drill near ${anchor.name}`
+      : "Simulated wildfire drill · Middletown, CA";
   const provider = await providers.simulator.fetchIncident();
   db().transaction(() => {
     db()
@@ -56,7 +72,7 @@ export async function simulatorStart(
       .run(
         incId,
         "WILDFIRE",
-        "Simulated Ridge Wildfire",
+        drillName,
         "Hackathon simulator incident",
         c.latitude,
         c.longitude,

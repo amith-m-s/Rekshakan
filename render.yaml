@@ -30,6 +30,11 @@ services:
         value: "5000"
       - key: CORS_ORIGINS
         value: https://rescuermap-dashboard-rset.onrender.com
+      # Seed demo data at live Cal OES zones and import field reports and alerts from the dashboard.
+      - key: INTELLIGENCE_URL
+        value: https://rescuermap-dashboard-rset.onrender.com
+      - key: INTELLIGENCE_SYNC_SECONDS
+        value: "60"
 
   - type: web
     name: rescuermap-dashboard-rset

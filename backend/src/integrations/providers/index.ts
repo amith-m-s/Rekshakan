@@ -133,7 +133,8 @@ const mock = {
   alerts: async () => [] as unknown[],
   shelters: async () => [] as unknown[],
   roads: async () => [] as unknown[],
-  geocoding: async () => ({ latitude: 12.9716, longitude: 77.5946 }),
+  // Middletown, Lake County, California.
+  geocoding: async () => ({ latitude: 38.7524, longitude: -122.615 }),
   ai: async () => ({
     summary: "Mock draft analysis; operational decisions remain rule-based.",
     draft: true,
