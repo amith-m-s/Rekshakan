@@ -25,5 +25,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - run: npx next typegen
       - run: npx tsc --noEmit
       - run: npm run lint -- app/api/route/route.ts lib/route-coordinates.mjs tests/route-coordinates.test.mjs
